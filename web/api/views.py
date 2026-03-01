@@ -1,3 +1,123 @@
-from django.shortcuts import render
+import secrets
 
-# Create your views here.
+from django.db import IntegrityError
+from rest_framework import status
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.response import Response
+import nh3
+
+from gallery.models import Gallery, Photo
+from .authentication import ApiKeyAuthentication, RequireApiKey
+from .serializers import (
+    GalleryCreateSerializer,
+    GalleryOutSerializer,
+    PhotoRegisterSerializer,
+    PhotoOutSerializer,
+)
+
+
+@api_view(['GET', 'POST', 'DELETE'])
+@authentication_classes([ApiKeyAuthentication])
+@permission_classes([RequireApiKey])
+def galleries_view(request):
+    """GET /api/galleries - List all galleries.
+    POST /api/galleries - Create a new gallery.
+    DELETE /api/galleries/{slug} - Delete a gallery.
+    """
+    if request.method == 'POST':
+        serializer = GalleryCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        gallery = Gallery(
+            name=serializer.validated_data['name'],
+            slug=serializer.validated_data['slug'],
+            token=secrets.token_urlsafe(24),
+        )
+
+        try:
+            gallery.save()
+        except IntegrityError:
+            return Response(
+                {'detail': 'Gallery with this slug already exists'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(GalleryOutSerializer(gallery).data, status=status.HTTP_201_CREATED)
+    elif request.method == 'DELETE':
+        gallery_slug = request.query_params.get('slug')
+        if not gallery_slug:
+            return Response({'detail': 'slug required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not Gallery.objects.filter(slug=gallery_slug).exists():
+            return Response(
+                {'detail': 'Gallery with this slug does not exist'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        gallery = Gallery.objects.get(slug=gallery_slug)
+
+        try:
+            gallery.delete()
+        except Exception:
+            return Response(
+                {'detail': 'Gallery with this slug could not be deleted'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(GalleryOutSerializer(gallery).data, status=status.HTTP_200_OK)
+
+    # GET
+    galleries = Gallery.objects.order_by('-created_at')
+    return Response(GalleryOutSerializer(galleries, many=True).data)
+
+
+@api_view(['POST'])
+@authentication_classes([ApiKeyAuthentication])
+@permission_classes([RequireApiKey])
+def register_photo(request, slug):
+    """POST /api/galleries/{slug}/photos - Register a photo."""
+    try:
+        gallery = Gallery.objects.get(slug=slug)
+    except Gallery.DoesNotExist:
+        return Response({'detail': 'Gallery not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = PhotoRegisterSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    photo = Photo.objects.create(
+        gallery=gallery,
+        filename=serializer.validated_data['filename'],
+        object_key=serializer.validated_data['object_key'],
+        display_order=serializer.validated_data['display_order'],
+    )
+
+    return Response(PhotoOutSerializer(photo).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@authentication_classes([ApiKeyAuthentication])
+@permission_classes([RequireApiKey])
+def get_selections(request, slug):
+    """GET /api/galleries/{slug}/selections - Get selected photo filenames."""
+    filenames = Photo.objects.filter(
+        gallery__slug=slug,
+        selection__isnull=False,
+    ).order_by('display_order').values_list('filename', flat=True)
+
+    return Response(list(filenames))
+
+
+@api_view(['PATCH'])
+@authentication_classes([ApiKeyAuthentication])
+@permission_classes([RequireApiKey])
+def archive_gallery(request, slug):
+    """PATCH /api/galleries/{slug}/archive - Archive a gallery (set is_active=False)."""
+    try:
+        gallery = Gallery.objects.get(slug=slug)
+    except Gallery.DoesNotExist:
+        return Response({'detail': 'Gallery not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    gallery.is_active = False
+    gallery.save()
+
+    return Response(GalleryOutSerializer(gallery).data)

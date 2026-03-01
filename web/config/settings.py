@@ -37,7 +37,7 @@ SECRET_KEY = ENV('SECRET_KEY')
 # False if not in os.environ because of casting above
 DEBUG = ENV('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ENV('ALLOWED_HOSTS').split(' ')
 
 
 # Application definition
@@ -49,8 +49,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'gallery.apps.GalleryConfig',
-    'api.apps.ApiConfig'
+    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -134,3 +135,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Object Storage Configuration
+OBJECT_STORAGE_ENDPOINT_URL = ENV('OBJECT_STORAGE_ENDPOINT_URL', default='')
+OBJECT_STORAGE_ACCESS_KEY_ID = ENV('OBJECT_STORAGE_ACCESS_KEY_ID', default='')
+OBJECT_STORAGE_SECRET_ACCESS_KEY = ENV('OBJECT_STORAGE_SECRET_ACCESS_KEY', default='')
+OBJECT_STORAGE_BUCKET_NAME = ENV('OBJECT_STORAGE_BUCKET_NAME', default='')
+OBJECT_STORAGE_PUBLIC_URL = ENV('OBJECT_STORAGE_PUBLIC_URL', default='')
+
+# API Authentication
+API_KEY = ENV('API_KEY')

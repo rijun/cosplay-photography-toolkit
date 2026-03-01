@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}{{ gallery.name }}{% endblock %}
+
+{% block content %}
+<div x-data="galleryApp()" class="gallery-container">
+    <h1>{{ gallery.name }}</h1>
+    <p class="gallery-tagline">&#10022; your magical moments &#10022;</p>
+
+    <div class="photo-grid">
+        {% for photo in photos %}
+        <div class="photo-card" :class="{ 'selected': selections[{{ photo.id }}] }">
+            <img
+                src="{{ photo.url }}"
+                alt="{{ photo.filename }}"
+                loading="lazy"
+                @click="openLightbox({{ forloop.counter0 }})"
+            >
+            <div class="photo-actions">
+                <button
+                    @click="toggleSelect({{ photo.id }})"
+                    :class="{ 'active': selections[{{ photo.id }}] }"
+                    class="btn-select"
+                >
+                    <span x-text="selections[{{ photo.id }}] ? '&#9829;' : '&#9825;'"></span>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Lightbox -->
+    <div x-show="lightboxOpen" x-cloak class="lightbox" @keydown.escape.window="closeLightbox()" @keydown.left.window="prevPhoto()" @keydown.right.window="nextPhoto()">
+        <div class="lightbox-backdrop" @click="closeLightbox()"></div>
+        <div class="lightbox-content">
+            <button class="lightbox-close" @click="closeLightbox()">&times;</button>
+            <button class="lightbox-prev" @click="prevPhoto()">&lsaquo;</button>
+            <img :src="currentPhoto?.url" :alt="currentPhoto?.filename" class="lightbox-image">
+            <button class="lightbox-next" @click="nextPhoto()">&rsaquo;</button>
+
+            <div class="lightbox-sidebar">
+                <p x-text="currentPhoto?.filename" class="photo-filename"></p>
+                <button
+                    @click="toggleSelect(currentPhoto?.id)"
+                    :class="{ 'active': selections[currentPhoto?.id] }"
+                    class="btn-select"
+                >
+                    <span x-text="selections[currentPhoto?.id] ? '&#9829; Selected' : '&#9825; Select'"></span>
+                </button>
+
+                <div class="comments-section">
+                    <h3>Comments</h3>
+                    <template x-for="comment in (currentPhoto?.comments || [])" :key="comment.id">
+                        <div class="comment">
+                            <p x-text="comment.body"></p>
+                        </div>
+                    </template>
+                    <form @submit.prevent="addComment()" class="comment-form">
+                        <textarea x-model="newComment" placeholder="Leave a comment..." rows="2"></textarea>
+                        <button type="submit" :disabled="!newComment.trim()">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function galleryApp() {
+    const photos = {{ photos_json|safe }};
+    const token = "{{ gallery.token }}";
+    const csrfToken = getCookie('csrftoken');
+    const selections = {};
+    photos.forEach(p => { selections[p.id] = p.is_selected; });
+
+    return {
+        photos,
+        token,
+        selections,
+        lightboxOpen: false,
+        currentIndex: 0,
+        newComment: "",
+
+        get currentPhoto() {
+            return this.photos[this.currentIndex] || null;
+        },
+
+        openLightbox(index) {
+            this.currentIndex = index;
+            this.lightboxOpen = true;
+        },
+        closeLightbox() {
+            this.lightboxOpen = false;
+        },
+        prevPhoto() {
+            if (this.currentIndex > 0) this.currentIndex--;
+        },
+        nextPhoto() {
+            if (this.currentIndex < this.photos.length - 1) this.currentIndex++;
+        },
+
+        async toggleSelect(photoId) {
+            const res = await fetch(`/g/${this.token}/photos/${photoId}/select`, {
+                method: "POST",
+                headers: { "X-CSRFToken": csrfToken },
+            });
+            const data = await res.json();
+            this.selections[photoId] = data.selected;
+        },
+
+        async addComment() {
+            const body = this.newComment.trim();
+            if (!body) return;
+            const photoId = this.currentPhoto.id;
+            const res = await fetch(`/g/${this.token}/photos/${photoId}/comment`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken,
+                },
+                body: JSON.stringify({ body }),
+            });
+            const comment = await res.json();
+            this.currentPhoto.comments.push(comment);
+            this.newComment = "";
+        },
+    };
+}
+</script>
+{% endblock %}
