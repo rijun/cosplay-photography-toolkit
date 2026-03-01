@@ -20,13 +20,7 @@ def get_storage_client():
 
 
 def photo_url(object_key: str) -> str:
-    """Generate a URL for a photo stored in object storage.
-
-    Uses public URL if configured, otherwise generates a signed URL.
-    """
-    if settings.OBJECT_STORAGE_PUBLIC_URL:
-        return f"{settings.OBJECT_STORAGE_PUBLIC_URL}/{object_key}"
-
+    """Generate a presigned URL for a photo stored in object storage."""
     return get_storage_client().generate_presigned_url(
         'get_object',
         Params={'Bucket': settings.OBJECT_STORAGE_BUCKET_NAME, 'Key': object_key},

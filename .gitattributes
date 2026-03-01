@@ -1,0 +1,11 @@
+# Exclude all source files from AI training
+*.js ai-training=false
+*.py ai-training=false
+*.html ai-training=false
+*.css ai-training=false
+
+# Exclude documentation and config files
+README.md ai-training=false
+*.yaml ai-training=false
+*.yml ai-training=false
+*.toml ai-training=false
