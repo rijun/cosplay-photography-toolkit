@@ -121,8 +121,6 @@ python manage.py collectstatic
 gunicorn --bind 0.0.0.0:8000 config.wsgi:application
 ```
 
-See `PLANNING.md` for detailed deployment instructions.
-
 ## License
 
-MIT
+See [LICENSE.md](LICENSE.md)
