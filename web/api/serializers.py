@@ -16,11 +16,10 @@ class GalleryOutSerializer(serializers.ModelSerializer):
 
 class PhotoRegisterSerializer(serializers.Serializer):
     filename = serializers.CharField(max_length=255)
-    object_key = serializers.CharField(max_length=512)
     display_order = serializers.IntegerField(default=0)
 
 
 class PhotoOutSerializer(serializers.ModelSerializer):
     class Meta:
         model = Photo
-        fields = ['id', 'filename', 'object_key', 'display_order', 'uploaded_at']
+        fields = ['id', 'filename', 'display_order', 'uploaded_at']

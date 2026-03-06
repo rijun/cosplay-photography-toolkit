@@ -3,21 +3,12 @@ from django.contrib import admin
 from .models import Gallery, Photo, Selection, Comment
 
 
-class PhotoInline(admin.TabularInline):
-    """Inline photo editor within gallery admin."""
-    model = Photo
-    extra = 0
-    readonly_fields = ['uploaded_at', 'object_key']
-    fields = ['filename', 'display_order', 'uploaded_at']
-
-
 @admin.register(Gallery)
 class GalleryAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug', 'is_active', 'created_at', 'photo_count', 'selection_count']
     list_filter = ['is_active', 'created_at']
     search_fields = ['name', 'slug']
     readonly_fields = ['token', 'created_at']
-    inlines = [PhotoInline]
 
     @admin.display(description='Photos')
     def photo_count(self, obj):

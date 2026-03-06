@@ -1,3 +1,4 @@
+import io
 from pathlib import Path
 
 import boto3
@@ -29,6 +30,17 @@ def upload_photo(photo_path: Path, object_key: str) -> None:
         config["object_storage_bucket_name"],
         object_key,
         ExtraArgs={"ContentType": content_type},
+    )
+
+
+def upload_file_buffer(buffer: io.BytesIO, object_key: str) -> None:
+    config = get_config()
+    client = _get_storage_client()
+    client.upload_fileobj(
+      buffer,
+      config["object_storage_bucket_name"],
+      object_key,
+      ExtraArgs={"ContentType": "image/webp"}
     )
 
 

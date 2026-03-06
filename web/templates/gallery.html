@@ -11,7 +11,7 @@
         {% for photo in photos %}
         <div class="photo-card" :class="{ 'selected': selections[{{ photo.id }}] }">
             <img
-                src="{{ photo.url }}"
+                src="{{ photo.thumbnail_url }}"
                 alt="{{ photo.filename }}"
                 loading="lazy"
                 @click="openLightbox({{ forloop.counter0 }})"
@@ -35,7 +35,7 @@
         <div class="lightbox-content">
             <button class="lightbox-close" @click="closeLightbox()">&times;</button>
             <button class="lightbox-prev" @click="prevPhoto()">&lsaquo;</button>
-            <img :src="currentPhoto?.url" :alt="currentPhoto?.filename" class="lightbox-image">
+            <img :src="currentPhoto?.preview_url" :alt="currentPhoto?.filename" class="lightbox-image">
             <button class="lightbox-next" @click="nextPhoto()">&rsaquo;</button>
 
             <div class="lightbox-sidebar">

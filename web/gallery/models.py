@@ -17,7 +17,6 @@ class Photo(models.Model):
         Gallery, on_delete=models.CASCADE, related_name="photos"
     )
     filename = models.TextField()
-    object_key = models.TextField()
     display_order = models.IntegerField(default=0)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 

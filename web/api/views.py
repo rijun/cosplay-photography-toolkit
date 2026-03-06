@@ -87,7 +87,6 @@ def register_photo(request, slug):
     photo = Photo.objects.create(
         gallery=gallery,
         filename=serializer.validated_data['filename'],
-        object_key=serializer.validated_data['object_key'],
         display_order=serializer.validated_data['display_order'],
     )
 

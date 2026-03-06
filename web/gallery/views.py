@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import nh3
 from django.http import JsonResponse, Http404
@@ -30,7 +31,8 @@ def view_gallery(request, token):
         photo_data.append({
             'id': photo.id,
             'filename': photo.filename,
-            'url': photo_url(photo.object_key),
+            'thumbnail_url': photo_url(f"{photo.gallery.slug}/thumbnails/{Path(photo.filename).stem}.webp"),
+            'preview_url': photo_url(f"{photo.gallery.slug}/previews/{Path(photo.filename).stem}.webp"),
             'is_selected': is_selected,
             'comments': [
                 {
