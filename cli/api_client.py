@@ -49,8 +49,8 @@ class ApiClient:
         resp.raise_for_status()
         return resp.json()
 
-    def get_selections(self, slug: str) -> list[str]:
-        resp = self._client.get(f"/api/galleries/{slug}/selections")
+    def get_selections(self, slug: str, flag: int = 0) -> list[str]:
+        resp = self._client.get(f"/api/galleries/{slug}/selections", params={"flag": flag})
         resp.raise_for_status()
         return resp.json()
 

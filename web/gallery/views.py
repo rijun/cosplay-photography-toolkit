@@ -6,7 +6,7 @@ from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
 
-from .models import Gallery, Photo, Selection, Comment
+from .models import Gallery, Photo, Flag, Comment
 
 
 @ensure_csrf_cookie
@@ -14,7 +14,7 @@ def view_gallery(request, token):
     """GET /g/{token} - Render gallery HTML view."""
     try:
         gallery = Gallery.objects.prefetch_related(
-            'photos__selection',
+            'photos__flags',
             'photos__comments',
         ).get(token=token)
     except Gallery.DoesNotExist:
@@ -24,12 +24,13 @@ def view_gallery(request, token):
 
     photo_data = []
     for photo in photos:
+        active_flags = [f.color for f in photo.flags.all()]
         photo_data.append({
             'id': photo.id,
             'filename': photo.filename,
             'thumbnail_url': photo.thumbnail_url,
             'preview_url': photo.preview_url,
-            'is_selected': hasattr(photo, 'selection'),
+            'flags': active_flags,
         })
 
     return render(request, 'gallery.html', {
@@ -39,18 +40,26 @@ def view_gallery(request, token):
 
 
 @require_http_methods(['POST'])
-def toggle_selection(request, token, photo_id):
-    """POST /g/{token}/photos/{photo_id}/select - Toggle photo selection."""
+def toggle_flag(request, token, photo_id):
+    """POST /g/{token}/photos/{photo_id}/flag?color=1 - Toggle a flag on a photo."""
     gallery = get_object_or_404(Gallery, token=token)
     photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
 
     try:
-        selection = Selection.objects.get(photo=photo)
-        selection.delete()
-        return JsonResponse({'selected': False})
-    except Selection.DoesNotExist:
-        Selection.objects.create(photo=photo)
-        return JsonResponse({'selected': True})
+        color = int(request.GET.get('color', 0))
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Invalid color'}, status=400)
+
+    if color not in range(6):
+        return JsonResponse({'error': 'Color must be 0-5'}, status=400)
+
+    try:
+        flag = Flag.objects.get(photo=photo, color=color)
+        flag.delete()
+        return JsonResponse({'color': color, 'active': False})
+    except Flag.DoesNotExist:
+        Flag.objects.create(photo=photo, color=color)
+        return JsonResponse({'color': color, 'active': True})
 
 
 @require_http_methods(['POST'])

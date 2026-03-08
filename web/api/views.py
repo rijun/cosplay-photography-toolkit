@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response
 import nh3
 
-from gallery.models import Gallery, Photo
+from gallery.models import Gallery, Photo, Flag
 from .authentication import ApiKeyAuthentication, RequireApiKey
 from .serializers import (
     GalleryCreateSerializer,
@@ -100,10 +100,22 @@ def register_photo(request, slug):
 @authentication_classes([ApiKeyAuthentication])
 @permission_classes([RequireApiKey])
 def get_selections(request, slug):
-    """GET /api/galleries/{slug}/selections - Get selected photo filenames."""
+    """GET /api/galleries/{slug}/selections?flag=0 - Get flagged photo filenames.
+
+    Query params:
+        flag: Color index (0=final, 1-5=person flags). Defaults to 0.
+    """
+    try:
+        color = int(request.query_params.get('flag', 0))
+    except (TypeError, ValueError):
+        return Response({'detail': 'Invalid flag value'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if color not in range(6):
+        return Response({'detail': 'Flag must be 0-5'}, status=status.HTTP_400_BAD_REQUEST)
+
     filenames = Photo.objects.filter(
         gallery__slug=slug,
-        selection__isnull=False,
+        flags__color=color,
     ).order_by('display_order').values_list('filename', flat=True)
 
     return Response(list(filenames))

@@ -41,14 +41,26 @@ class Photo(models.Model):
         db_table = "photos"
 
 
-class Selection(models.Model):
-    photo = models.OneToOneField(
-        Photo, on_delete=models.CASCADE, related_name="selection"
+FLAG_COLORS = [
+    (0, "final"),
+    (1, "rose"),
+    (2, "lavender"),
+    (3, "sage"),
+    (4, "sky"),
+    (5, "amber"),
+]
+
+
+class Flag(models.Model):
+    photo = models.ForeignKey(
+        Photo, on_delete=models.CASCADE, related_name="flags"
     )
+    color = models.IntegerField(choices=FLAG_COLORS)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "selections"
+        db_table = "flags"
+        unique_together = ("photo", "color")
 
 
 class Comment(models.Model):

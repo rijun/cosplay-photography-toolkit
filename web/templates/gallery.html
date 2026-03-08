@@ -7,6 +7,25 @@
     <h1>{{ gallery.name }}</h1>
     <p class="gallery-tagline">~ select your favorite moments ~</p>
 
+    <!-- Flag Picker -->
+    <div class="flag-picker">
+        <span class="flag-picker-label">your color</span>
+        <div class="flag-picker-dots">
+            <template x-for="f in flagDefs" :key="f.color">
+                <button
+                    class="flag-dot"
+                    :class="{ 'active': activeFlag === f.color }"
+                    :style="`--dot-color: ${f.hex}; --dot-glow: ${f.glow}`"
+                    :title="f.label"
+                    @click="setActiveFlag(f.color)"
+                >
+                    <span class="flag-dot-inner"></span>
+                    <span class="flag-dot-label" x-text="f.label"></span>
+                </button>
+            </template>
+        </div>
+    </div>
+
     <div class="photo-grid">
         {% for photo in photos %}
         <div class="photo-card"
@@ -14,21 +33,32 @@
              data-photo-id="{{ photo.id }}"
              data-preview-url="{{ photo.preview_url }}"
              data-filename="{{ photo.filename }}"
-             data-selected="{{ photo.is_selected|yesno:'true,false' }}"
-             :class="{ 'selected': selections[photoId] }">
+             data-flags="{{ photo.flags }">
             <img
                 src="{{ photo.thumbnail_url }}"
                 alt="{{ photo.filename }}"
                 loading="lazy"
                 @click="openLightbox(photoIndex)"
             >
+            <!-- Flag dots on card -->
+            <div class="card-flags">
+                <template x-for="f in flagDefs" :key="f.color">
+                    <span
+                        class="card-flag-dot"
+                        :style="`--dot-color: ${f.hex}`"
+                        x-show="photoFlags[photoId]?.includes(f.color)"
+                        x-transition.opacity
+                    ></span>
+                </template>
+            </div>
             <div class="photo-actions">
                 <button
-                    @click="toggleSelect(photoId)"
-                    :class="{ 'active': selections[photoId] }"
+                    @click="toggleFlag(photoId)"
+                    :class="{ 'active': photoFlags[photoId]?.includes(activeFlag) }"
+                    :style="activeFlagStyle"
                     class="btn-select"
                 >
-                    <span x-text="selections[photoId] ? '&#9829;' : '&#9825;'">{% if photo.is_selected %}&#9829;{% else %}&#9825;{% endif %}</span>
+                    <span x-text="photoFlags[photoId]?.includes(activeFlag) ? '&#9829;' : '&#9825;'">&#9825;</span>
                 </button>
             </div>
         </div>
@@ -46,13 +76,21 @@
 
             <div class="lightbox-sidebar">
                 <p x-text="lightboxPhoto?.filename" class="photo-filename"></p>
-                <button
-                    @click="toggleSelect(lightboxPhoto?.id)"
-                    :class="{ 'active': selections[lightboxPhoto?.id] }"
-                    class="btn-select"
-                >
-                    <span x-text="selections[lightboxPhoto?.id] ? '&#9829; Selected' : '&#9825; Select'"></span>
-                </button>
+
+                <!-- Flag toggles in lightbox -->
+                <div class="lightbox-flags">
+                    <template x-for="f in flagDefs" :key="f.color">
+                        <button
+                            class="lightbox-flag-btn"
+                            :class="{ 'active': lightboxPhoto && photoFlags[lightboxPhoto.id]?.includes(f.color) }"
+                            :style="`--flag-color: ${f.hex}; --flag-glow: ${f.glow}`"
+                            @click="toggleFlag(lightboxPhoto?.id, f.color)"
+                        >
+                            <span class="lightbox-flag-dot"></span>
+                            <span class="lightbox-flag-label" x-text="f.label"></span>
+                        </button>
+                    </template>
+                </div>
 
                 <div class="comments-section">
                     <h3>Comments</h3>
@@ -78,7 +116,6 @@ function getCookie(name) {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
             const cookie = cookies[i].trim();
-            // Does this cookie string begin with the name we want?
             if (cookie.substring(0, name.length + 1) === (name + '=')) {
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                 break;
@@ -93,23 +130,54 @@ function galleryApp() {
     const csrfToken = getCookie('csrftoken');
     const cards = [...document.querySelectorAll('.photo-card')];
 
-    const selections = {};
+    const flagDefs = [
+        { color: 1, label: 'rose',     hex: '#d4857a', glow: 'rgba(212,133,122,0.35)' },
+        { color: 2, label: 'lavender', hex: '#a888b8', glow: 'rgba(168,136,184,0.35)' },
+        { color: 3, label: 'sage',     hex: '#88a888', glow: 'rgba(136,168,136,0.35)' },
+        { color: 4, label: 'sky',      hex: '#7a9ab8', glow: 'rgba(122,154,184,0.35)' },
+        { color: 5, label: 'amber',    hex: '#c4a050', glow: 'rgba(196,160,80,0.35)' },
+        { color: 0, label: 'final',    hex: '#c45050', glow: 'rgba(196,80,80,0.35)' },
+    ];
+
+    // Parse flags from DOM
+    const photoFlags = {};
     cards.forEach(el => {
-        selections[parseInt(el.dataset.photoId)] = el.dataset.selected === 'true';
+        const id = parseInt(el.dataset.photoId);
+        try {
+            photoFlags[id] = JSON.parse(el.dataset.flags.replace(/'/g, '"'));
+        } catch {
+            photoFlags[id] = [];
+        }
     });
 
+    // Restore active flag from localStorage
+    const storageKey = `gallery-flag-${token}`;
+    let savedFlag = parseInt(localStorage.getItem(storageKey));
+    if (isNaN(savedFlag) || savedFlag < 0 || savedFlag > 5) savedFlag = 1;
+
     return {
-        selections,
+        flagDefs,
+        photoFlags,
+        activeFlag: savedFlag,
         lightboxOpen: false,
         currentIndex: 0,
         lightboxPhoto: null,
         newComment: "",
 
+        get activeFlagStyle() {
+            const f = this.flagDefs.find(d => d.color === this.activeFlag);
+            return f ? `--active-flag-color: ${f.hex}; --active-flag-glow: ${f.glow}` : '';
+        },
+
+        setActiveFlag(color) {
+            this.activeFlag = color;
+            localStorage.setItem(storageKey, color);
+        },
+
         async openLightbox(index) {
             this.currentIndex = index;
             await this._loadLightboxPhoto(index);
             this.lightboxOpen = true;
-            // TODO: open lightbox immediately and fetch comments in background for better responsiveness on high-latency connections
         },
         closeLightbox() {
             this.lightboxOpen = false;
@@ -140,13 +208,22 @@ function galleryApp() {
             this.lightboxPhoto.comments = await res.json();
         },
 
-        async toggleSelect(photoId) {
-            const res = await fetch(`/g/${token}/photos/${photoId}/select`, {
+        async toggleFlag(photoId, color) {
+            if (!photoId) return;
+            const flagColor = color !== undefined ? color : this.activeFlag;
+            const res = await fetch(`/g/${token}/photos/${photoId}/flag?color=${flagColor}`, {
                 method: "POST",
                 headers: { "X-CSRFToken": csrfToken },
             });
             const data = await res.json();
-            this.selections[photoId] = data.selected;
+            const flags = this.photoFlags[photoId] || [];
+            if (data.active) {
+                if (!flags.includes(flagColor)) flags.push(flagColor);
+            } else {
+                const idx = flags.indexOf(flagColor);
+                if (idx !== -1) flags.splice(idx, 1);
+            }
+            this.photoFlags[photoId] = [...flags];
         },
 
         async addComment() {

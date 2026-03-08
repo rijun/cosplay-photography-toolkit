@@ -155,27 +155,119 @@ h1::after {
         0 4px 12px rgba(186, 143, 133, 0.08);
 }
 
-.photo-card.selected {
-    box-shadow:
-        0 4px 16px rgba(200, 140, 130, 0.2),
-        inset 0 0 0 2px #d4a59a;
+/* === Flag Picker — watercolor palette bar === */
+.flag-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+    padding: 0.65rem 1rem;
+    background: rgba(255, 252, 249, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(186, 143, 133, 0.15);
+    border-radius: 32px;
+    width: fit-content;
+    box-shadow: 0 2px 12px rgba(107, 87, 80, 0.06);
 }
 
-.photo-card.selected::before {
-    content: '♡';
+.flag-picker-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #b0a098;
+    padding-right: 0.25rem;
+    white-space: nowrap;
+}
+
+.flag-picker-dots {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.flag-dot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem 0.4rem;
+    border-radius: 12px;
+    transition: background 0.2s;
+}
+
+.flag-dot:hover {
+    background: rgba(186, 143, 133, 0.1);
+}
+
+.flag-dot-inner {
+    display: block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--dot-color);
+    opacity: 0.45;
+    transition: opacity 0.25s, transform 0.25s, box-shadow 0.25s;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.flag-dot:hover .flag-dot-inner {
+    opacity: 0.7;
+    transform: scale(1.1);
+}
+
+.flag-dot.active .flag-dot-inner {
+    opacity: 1;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 3px var(--dot-glow), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.flag-dot-label {
+    font-size: 0.55rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #b0a098;
+    transition: color 0.2s;
+}
+
+.flag-dot.active .flag-dot-label {
+    color: var(--dot-color);
+}
+
+/* === Card flag dots === */
+.card-flags {
     position: absolute;
-    top: 1rem;
-    left: 1rem;
-    font-size: 1.2rem;
-    color: #d4857a;
+    top: 0.75rem;
+    left: 0.75rem;
+    display: flex;
+    gap: 4px;
     z-index: 5;
-    text-shadow: 0 1px 3px rgba(255,255,255,0.8);
-    animation: gentlePulse 2s ease-in-out infinite;
 }
 
-@keyframes gentlePulse {
-    0%, 100% { opacity: 0.9; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.1); }
+.card-flag-dot {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--dot-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+    animation: flagAppear 0.3s ease-out;
+}
+
+@keyframes flagAppear {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* === Active-flag-colored select button on cards === */
+.btn-select.active {
+    color: var(--active-flag-color, #c47a70);
+    border-color: var(--active-flag-color, #d4a59a);
+    background: rgba(248, 232, 228, 0.95);
 }
 
 .photo-card img {
@@ -336,10 +428,69 @@ h1::after {
     border-bottom: 1px dashed rgba(186, 143, 133, 0.3);
 }
 
-.lightbox-sidebar .btn-select {
+/* === Lightbox flag toggles === */
+.lightbox-flags {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+}
+
+.lightbox-flag-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
     width: 100%;
-    margin-bottom: 0.75rem;
-    padding: 0.6rem 1rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 252, 249, 0.6);
+    border: 1.5px solid rgba(186, 143, 133, 0.15);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.lightbox-flag-btn:hover {
+    background: rgba(248, 238, 232, 0.8);
+    border-color: var(--flag-color);
+}
+
+.lightbox-flag-btn.active {
+    background: rgba(248, 238, 232, 0.95);
+    border-color: var(--flag-color);
+    box-shadow: 0 0 0 2px var(--flag-glow);
+}
+
+.lightbox-flag-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--flag-color);
+    opacity: 0.4;
+    transition: opacity 0.2s, transform 0.2s;
+    flex-shrink: 0;
+}
+
+.lightbox-flag-btn:hover .lightbox-flag-dot {
+    opacity: 0.7;
+}
+
+.lightbox-flag-btn.active .lightbox-flag-dot {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.lightbox-flag-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #a09890;
+    transition: color 0.2s;
+}
+
+.lightbox-flag-btn.active .lightbox-flag-label {
+    color: var(--flag-color);
 }
 
 /* Comments — handwritten note feel */
@@ -424,6 +575,9 @@ h1::after {
     .photo-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
 
     .sakura:nth-child(n+7) { display: none; } /* Fewer petals on mobile */
+
+    .flag-picker { width: 100%; justify-content: center; }
+    .flag-dot-label { display: none; }
 
     .lightbox-content { flex-direction: column; align-items: center; }
     .lightbox-image { max-width: 90vw; max-height: 55vh; }
