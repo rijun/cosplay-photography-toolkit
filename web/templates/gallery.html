@@ -14,9 +14,9 @@
             <template x-for="f in flagDefs" :key="f.color">
                 <button
                     class="flag-dot"
-                    :class="{ 'active': activeFlag === f.color }"
+                    :class="{ 'active': activeFlag === f.color, 'flag-dot--final': f.color === 0 }"
                     :style="`--dot-color: ${f.hex}; --dot-glow: ${f.glow}`"
-                    :title="f.label"
+                    :title="f.color === 0 ? 'final pick (photographer)' : `${f.label} — pick your color, each person uses a different one`"
                     @click="setActiveFlag(f.color)"
                 >
                     <span class="flag-dot-inner"></span>
@@ -24,6 +24,7 @@
                 </button>
             </template>
         </div>
+        <span class="flag-picker-hint">each person picks a color</span>
     </div>
 
     <div class="photo-grid">
@@ -33,7 +34,7 @@
              data-photo-id="{{ photo.id }}"
              data-preview-url="{{ photo.preview_url }}"
              data-filename="{{ photo.filename }}"
-             data-flags="{{ photo.flags }">
+             data-flags="{{ photo.flags }}">
             <img
                 src="{{ photo.thumbnail_url }}"
                 alt="{{ photo.filename }}"
@@ -82,7 +83,7 @@
                     <template x-for="f in flagDefs" :key="f.color">
                         <button
                             class="lightbox-flag-btn"
-                            :class="{ 'active': lightboxPhoto && photoFlags[lightboxPhoto.id]?.includes(f.color) }"
+                            :class="{ 'active': lightboxPhoto && photoFlags[lightboxPhoto.id]?.includes(f.color), 'lightbox-flag-btn--final': f.color === 0 }"
                             :style="`--flag-color: ${f.hex}; --flag-glow: ${f.glow}`"
                             @click="toggleFlag(lightboxPhoto?.id, f.color)"
                         >
@@ -94,15 +95,20 @@
 
                 <div class="comments-section">
                     <h3>Comments</h3>
-                    <template x-for="comment in (lightboxPhoto?.comments || [])" :key="comment.id">
-                        <div class="comment">
-                            <p x-text="comment.body"></p>
+                    <div x-show="commentsLoading" class="comments-loading">loading...</div>
+                    <template x-if="!commentsLoading">
+                        <div>
+                            <template x-for="comment in (lightboxPhoto?.comments || [])" :key="comment.id">
+                                <div class="comment">
+                                    <p x-text="comment.body"></p>
+                                </div>
+                            </template>
+                            <form @submit.prevent="addComment()" class="comment-form">
+                                <textarea x-model="newComment" placeholder="Leave a comment..." rows="2"></textarea>
+                                <button type="submit" :disabled="!newComment.trim()">Send</button>
+                            </form>
                         </div>
                     </template>
-                    <form @submit.prevent="addComment()" class="comment-form">
-                        <textarea x-model="newComment" placeholder="Leave a comment..." rows="2"></textarea>
-                        <button type="submit" :disabled="!newComment.trim()">Send</button>
-                    </form>
                 </div>
             </div>
         </div>
@@ -162,6 +168,7 @@ function galleryApp() {
         lightboxOpen: false,
         currentIndex: 0,
         lightboxPhoto: null,
+        commentsLoading: false,
         newComment: "",
 
         get activeFlagStyle() {
@@ -174,28 +181,9 @@ function galleryApp() {
             localStorage.setItem(storageKey, color);
         },
 
-        async openLightbox(index) {
+        // Open immediately, fetch comments in background
+        openLightbox(index) {
             this.currentIndex = index;
-            await this._loadLightboxPhoto(index);
-            this.lightboxOpen = true;
-        },
-        closeLightbox() {
-            this.lightboxOpen = false;
-        },
-        async prevPhoto() {
-            if (this.currentIndex > 0) {
-                this.currentIndex--;
-                await this._loadLightboxPhoto(this.currentIndex);
-            }
-        },
-        async nextPhoto() {
-            if (this.currentIndex < cards.length - 1) {
-                this.currentIndex++;
-                await this._loadLightboxPhoto(this.currentIndex);
-            }
-        },
-
-        async _loadLightboxPhoto(index) {
             const card = cards[index];
             const id = parseInt(card.dataset.photoId);
             this.lightboxPhoto = {
@@ -204,26 +192,96 @@ function galleryApp() {
                 filename: card.dataset.filename,
                 comments: [],
             };
-            const res = await fetch(`/g/${token}/photos/${id}/comments`);
-            this.lightboxPhoto.comments = await res.json();
+            this.lightboxOpen = true;
+            this._fetchComments(id);
+        },
+
+        closeLightbox() {
+            this.lightboxOpen = false;
+        },
+
+        prevPhoto() {
+            if (this.currentIndex > 0) {
+                this.currentIndex--;
+                this._navigateTo(this.currentIndex);
+            }
+        },
+        nextPhoto() {
+            if (this.currentIndex < cards.length - 1) {
+                this.currentIndex++;
+                this._navigateTo(this.currentIndex);
+            }
+        },
+
+        _navigateTo(index) {
+            const card = cards[index];
+            const id = parseInt(card.dataset.photoId);
+            this.lightboxPhoto = {
+                id,
+                preview_url: card.dataset.previewUrl,
+                filename: card.dataset.filename,
+                comments: [],
+            };
+            this._fetchComments(id);
+        },
+
+        async _fetchComments(id) {
+            this.commentsLoading = true;
+            try {
+                const res = await fetch(`/g/${token}/photos/${id}/comments`);
+                const comments = await res.json();
+                // Only update if still viewing the same photo
+                if (this.lightboxPhoto?.id === id) {
+                    this.lightboxPhoto = { ...this.lightboxPhoto, comments };
+                }
+            } finally {
+                if (this.lightboxPhoto?.id === id) {
+                    this.commentsLoading = false;
+                }
+            }
         },
 
         async toggleFlag(photoId, color) {
             if (!photoId) return;
             const flagColor = color !== undefined ? color : this.activeFlag;
-            const res = await fetch(`/g/${token}/photos/${photoId}/flag?color=${flagColor}`, {
-                method: "POST",
-                headers: { "X-CSRFToken": csrfToken },
-            });
-            const data = await res.json();
-            const flags = this.photoFlags[photoId] || [];
-            if (data.active) {
-                if (!flags.includes(flagColor)) flags.push(flagColor);
+
+            // Optimistic update
+            const current = [...(this.photoFlags[photoId] || [])];
+            const idx = current.indexOf(flagColor);
+            const wasActive = idx !== -1;
+            if (wasActive) {
+                current.splice(idx, 1);
             } else {
-                const idx = flags.indexOf(flagColor);
-                if (idx !== -1) flags.splice(idx, 1);
+                current.push(flagColor);
             }
-            this.photoFlags[photoId] = [...flags];
+            this.photoFlags[photoId] = [...current];
+
+            try {
+                const res = await fetch(`/g/${token}/photos/${photoId}/flag?color=${flagColor}`, {
+                    method: "POST",
+                    headers: { "X-CSRFToken": csrfToken },
+                });
+                const data = await res.json();
+                // Sync with confirmed server state
+                const confirmed = [...(this.photoFlags[photoId] || [])];
+                const serverIdx = confirmed.indexOf(flagColor);
+                if (data.active && serverIdx === -1) {
+                    confirmed.push(flagColor);
+                } else if (!data.active && serverIdx !== -1) {
+                    confirmed.splice(serverIdx, 1);
+                }
+                this.photoFlags[photoId] = [...confirmed];
+            } catch {
+                // Revert optimistic update on network error
+                const reverted = [...(this.photoFlags[photoId] || [])];
+                const revertIdx = reverted.indexOf(flagColor);
+                if (wasActive && revertIdx === -1) {
+                    reverted.push(flagColor);
+                } else if (!wasActive && revertIdx !== -1) {
+                    reverted.splice(revertIdx, 1);
+                }
+                this.photoFlags[photoId] = [...reverted];
+            }
         },
 
         async addComment() {

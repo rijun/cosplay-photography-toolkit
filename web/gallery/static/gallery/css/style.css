@@ -33,7 +33,7 @@ body {
     position: fixed;
     inset: 0;
     pointer-events: none;
-    z-index: 1000;
+    z-index: 50;
     overflow: hidden;
 }
 
@@ -181,6 +181,15 @@ h1::after {
     white-space: nowrap;
 }
 
+.flag-picker-hint {
+    font-size: 0.65rem;
+    color: #c0b0a8;
+    white-space: nowrap;
+    padding-left: 0.25rem;
+    border-left: 1px solid rgba(186, 143, 133, 0.2);
+    font-style: italic;
+}
+
 .flag-picker-dots {
     display: flex;
     gap: 0.35rem;
@@ -238,6 +247,13 @@ h1::after {
     color: var(--dot-color);
 }
 
+/* Separator before the final flag */
+.flag-dot--final {
+    margin-left: 0.35rem;
+    padding-left: 0.6rem;
+    border-left: 1.5px solid rgba(186, 143, 133, 0.25);
+}
+
 /* === Card flag dots === */
 .card-flags {
     position: absolute;
@@ -255,12 +271,6 @@ h1::after {
     border-radius: 50%;
     background: var(--dot-color);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1.5px rgba(255, 255, 255, 0.6);
-    animation: flagAppear 0.3s ease-out;
-}
-
-@keyframes flagAppear {
-    from { transform: scale(0); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
 }
 
 /* === Active-flag-colored select button on cards === */
@@ -309,7 +319,7 @@ h1::after {
     padding: 0.4rem 0.9rem;
     border-radius: 24px;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: color 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
     font-family: inherit;
 }
 
@@ -319,17 +329,11 @@ h1::after {
     color: #7a6560;
 }
 
-.btn-select.active {
-    color: #c47a70;
-    border-color: #d4a59a;
-    background: rgba(248, 232, 228, 0.95);
-}
-
 /* Lightbox */
 .lightbox {
     position: fixed;
     inset: 0;
-    z-index: 500;
+    z-index: 200;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -493,8 +497,30 @@ h1::after {
     color: var(--flag-color);
 }
 
+/* Separator before the final flag in lightbox — drawn outside the button */
+.lightbox-flag-btn--final {
+    margin-top: 0.6rem;
+    position: relative;
+}
+
+.lightbox-flag-btn--final::before {
+    content: '';
+    position: absolute;
+    top: -0.4rem;
+    left: 0;
+    right: 0;
+    border-top: 1.5px dashed rgba(186, 143, 133, 0.3);
+}
+
 /* Comments — handwritten note feel */
 .comments-section { margin-top: 1.25rem; }
+
+.comments-loading {
+    font-size: 0.75rem;
+    color: #b8a8a0;
+    font-style: italic;
+    padding: 0.5rem 0;
+}
 
 .comments-section h3 {
     font-family: "Quicksand", sans-serif;
@@ -578,6 +604,7 @@ h1::after {
 
     .flag-picker { width: 100%; justify-content: center; }
     .flag-dot-label { display: none; }
+    .flag-picker-hint { display: none; }
 
     .lightbox-content { flex-direction: column; align-items: center; }
     .lightbox-image { max-width: 90vw; max-height: 55vh; }
