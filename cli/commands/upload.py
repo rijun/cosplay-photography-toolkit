@@ -6,7 +6,7 @@ import click
 
 from cli.api_client import get_client
 from cli.image_processing import make_variant, THUMB_WIDTH, MEDIUM_WIDTH
-from cli.object_storage import upload_photo, upload_file_buffer
+from cli.object_storage import upload_photo, upload_file_buffer, build_keys
 
 PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif"}
 
@@ -16,7 +16,7 @@ PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif"}
 @click.option("--gallery", "-g", "gallery_slug", required=True, help="Gallery slug")
 def upload(path: Path, gallery_slug: str):
     """Upload photos to a gallery."""
-    # Check if source folder and files exist
+    # Check if the source folder and files exist
     if path.is_file():
         files = [path]
     else:
@@ -30,15 +30,20 @@ def upload(path: Path, gallery_slug: str):
     click.confirm("Ready to process photos?", abort=True)
 
     # Remove unnecessary exif data (e.g. Lightroom ratings and tags)
-    exiftool_res = subprocess.run(["exiftool", "-IPTC:Keywords=", "-XMP:Subject=", "-XMP:WeightedFlatSubject=", "-rating=", "-label=", "-ext", "pg", "-overwrite_original", "-P", path])
+    exiftool_res = subprocess.run(["exiftool", "-IPTC:Keywords=", "-XMP:Subject=", "-XMP:WeightedFlatSubject=", "-rating=", "-label=", "-ext", "jpg", "-overwrite_original", "-P", path])
     if exiftool_res.returncode != 0:
         click.echo("Exiftool failed.")
         return
 
     # Upload files to the object storage
+    file_keys = [(file, *build_keys(gallery_slug, file)) for file in files]
+
     click.echo(f"Uploading {len(files)} photo(s) to '{gallery_slug}'...")
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_file = {executor.submit(_process_file, file, gallery_slug): file for file in files}
+        future_to_file = {
+            executor.submit(_process_file, file, object_key, thumbnail_key, preview_key): file
+            for file, object_key, thumbnail_key, preview_key in file_keys
+        }
         for future in concurrent.futures.as_completed(future_to_file):
             file = future_to_file[future]
             try:
@@ -48,17 +53,14 @@ def upload(path: Path, gallery_slug: str):
             else:
                 click.echo(f"  Done {file.name}")
 
-    # Register files with gallery
     with get_client() as client:
-        for i, file in enumerate(files, 1):
-            # click.echo(f"  [{i}/{len(files)}] {file.name}")
-            # upload_photo(file, object_key)
-            client.register_photo(gallery_slug, file.name, display_order=i)
+        for i, (file, object_key, thumbnail_key, preview_key) in enumerate(file_keys, 1):
+            client.register_photo(gallery_slug, file.name, object_key, thumbnail_key, preview_key, display_order=i)
 
     click.echo("Done.")
 
 
-def _process_file(file: Path, gallery_slug: str) -> None:
-    upload_photo(file, f"{gallery_slug}/full-res/{file.name}")
-    upload_file_buffer(make_variant(file, THUMB_WIDTH), f"{gallery_slug}/thumbnails/{file.stem}.webp")
-    upload_file_buffer(make_variant(file, MEDIUM_WIDTH), f"{gallery_slug}/previews/{file.stem}.webp")
+def _process_file(file: Path, object_key: str, thumbnail_key: str, preview_key: str) -> None:
+    upload_photo(file, object_key)
+    upload_file_buffer(make_variant(file, THUMB_WIDTH), thumbnail_key)
+    upload_file_buffer(make_variant(file, MEDIUM_WIDTH), preview_key)

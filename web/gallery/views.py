@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 import nh3
 from django.http import JsonResponse, Http404
@@ -8,7 +7,6 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .models import Gallery, Photo, Selection, Comment
-from .object_storage import photo_url
 
 
 @ensure_csrf_cookie
@@ -26,28 +24,17 @@ def view_gallery(request, token):
 
     photo_data = []
     for photo in photos:
-        is_selected = hasattr(photo, 'selection')
-
         photo_data.append({
             'id': photo.id,
             'filename': photo.filename,
-            'thumbnail_url': photo_url(f"{photo.gallery.slug}/thumbnails/{Path(photo.filename).stem}.webp"),
-            'preview_url': photo_url(f"{photo.gallery.slug}/previews/{Path(photo.filename).stem}.webp"),
-            'is_selected': is_selected,
-            'comments': [
-                {
-                    'id': c.id,
-                    'body': c.body,
-                    'created_at': c.created_at.isoformat(),
-                }
-                for c in sorted(photo.comments.all(), key=lambda c: c.created_at)
-            ],
+            'thumbnail_url': photo.thumbnail_url,
+            'preview_url': photo.preview_url,
+            'is_selected': hasattr(photo, 'selection'),
         })
 
     return render(request, 'gallery.html', {
         'gallery': gallery,
         'photos': photo_data,
-        'photos_json': json.dumps(photo_data),
     })
 
 
@@ -88,3 +75,15 @@ def add_comment(request, token, photo_id):
         'body': comment.body,
         'created_at': comment.created_at.isoformat(),
     })
+
+
+@require_http_methods(['GET'])
+def get_comments(request, token, photo_id):
+    """GET /g/{token}/photos/{photo_id}/comments - Get comments for a photo."""
+    gallery = get_object_or_404(Gallery, token=token)
+    photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
+    comments = [
+        {'id': c.id, 'body': c.body, 'created_at': c.created_at.isoformat()}
+        for c in photo.comments.order_by('created_at')
+    ]
+    return JsonResponse(comments, safe=False)

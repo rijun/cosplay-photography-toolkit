@@ -35,10 +35,16 @@ class ApiClient:
         resp.raise_for_status()
         return resp.json()
 
-    def register_photo(self, slug: str, filename: str, display_order: int) -> dict:
+    def register_photo(self, slug: str, filename: str, object_key: str, thumbnail_key: str, preview_key: str, display_order: int) -> dict:
         resp = self._client.post(
             f"/api/galleries/{slug}/photos",
-            json={"filename": filename, "display_order": display_order},
+            json={
+                "filename": filename,
+                "object_key": object_key,
+                "thumbnail_key": thumbnail_key,
+                "preview_key": preview_key,
+                "display_order": display_order,
+            },
         )
         resp.raise_for_status()
         return resp.json()
