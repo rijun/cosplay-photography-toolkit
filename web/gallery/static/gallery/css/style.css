@@ -128,6 +128,40 @@ h1::after {
     font-weight: 500;
 }
 
+/* === Gallery toolbar === */
+.gallery-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.btn-toolbar {
+    background: rgba(255, 252, 249, 0.85);
+    border: 1.5px solid rgba(186, 143, 133, 0.3);
+    color: #9a8580;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.4rem 1rem;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-toolbar:hover {
+    border-color: rgba(212, 165, 154, 0.6);
+    background: rgba(248, 238, 232, 0.95);
+    color: #7a6560;
+}
+
+.btn-toolbar.active {
+    background: rgba(212, 165, 154, 0.2);
+    border-color: #d4a59a;
+    color: #8a5a50;
+}
+
 /* Photo grid */
 .photo-grid {
     display: grid;
@@ -146,6 +180,96 @@ h1::after {
         0 1px 3px rgba(107, 87, 80, 0.06);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     padding: 0.5rem 0.5rem 0.4rem;
+}
+
+.photo-card--select-mode {
+    cursor: pointer;
+}
+
+.photo-card--selected {
+    box-shadow:
+        0 0 0 2.5px #d4a59a,
+        0 4px 16px rgba(212, 165, 154, 0.25);
+}
+
+.photo-card--selected img {
+    opacity: 0.85;
+}
+
+/* Checkmark overlay */
+.card-select-overlay {
+    position: absolute;
+    inset: 0.5rem;
+    border-radius: 2px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 0.4rem;
+    z-index: 6;
+}
+
+.card-checkmark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #d4a59a;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* === Selection action bar === */
+.selection-bar {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.65rem 1.25rem;
+    background: rgba(74, 63, 58, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 32px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    color: #f5ede6;
+}
+
+.selection-count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.selection-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-selection {
+    background: rgba(255, 252, 249, 0.15);
+    border: 1px solid rgba(255, 252, 249, 0.2);
+    color: #f5ede6;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.9rem;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-selection:hover {
+    background: rgba(255, 252, 249, 0.25);
 }
 
 .photo-card:hover {

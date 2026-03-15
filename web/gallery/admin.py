@@ -1,14 +1,20 @@
 from django.contrib import admin
+from django.utils.html import format_html
 
 from .models import Gallery, Photo, Flag, Comment, FLAG_COLORS
 
 
 @admin.register(Gallery)
 class GalleryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'is_active', 'created_at', 'photo_count', 'flag_count']
+    list_display = ['name', 'slug', 'is_active', 'url', 'created_at', 'photo_count', 'flag_count']
     list_filter = ['is_active', 'created_at']
     search_fields = ['name', 'slug']
-    readonly_fields = ['token', 'created_at']
+    readonly_fields = ['token', 'url', 'created_at']
+
+    @admin.display(description='URL')
+    def url(self, obj):
+        url = f'/g/{obj.token}'
+        return format_html('<a href="{}">{}</a>', url, url)
 
     @admin.display(description='Photos')
     def photo_count(self, obj):
