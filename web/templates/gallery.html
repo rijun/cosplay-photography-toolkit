@@ -35,11 +35,33 @@
         <a href="/g/{{ gallery.token }}/download" class="btn-toolbar">Download All</a>
     </div>
 
+    <!-- Filter bar -->
+    <div class="filter-bar">
+        <span class="filter-bar-label">show</span>
+        <button
+            class="filter-chip"
+            :class="{ 'active': filterFlag === null }"
+            @click="filterFlag = null"
+        >all</button>
+        <template x-for="f in flagDefs" :key="f.color">
+            <button
+                class="filter-chip"
+                :class="{ 'active': filterFlag === f.color }"
+                :style="`--chip-color: ${f.hex}; --chip-glow: ${f.glow}`"
+                @click="filterFlag = (filterFlag === f.color ? null : f.color)"
+            >
+                <span class="filter-chip-dot"></span>
+                <span x-text="f.label"></span>
+            </button>
+        </template>
+    </div>
+
     <div class="photo-grid">
         {% for photo in photos %}
         <div class="photo-card"
              x-data="{ photoId: {{ photo.id }}, photoIndex: {{ forloop.counter0 }} }"
              :class="{ 'photo-card--selected': isSelected(photoId), 'photo-card--select-mode': selectMode }"
+             x-show="filterFlag === null || photoFlags[photoId]?.includes(filterFlag)"
              data-photo-id="{{ photo.id }}"
              data-preview-url="{{ photo.preview_url }}"
              data-filename="{{ photo.filename }}"
@@ -214,6 +236,7 @@ function galleryApp() {
         selectedPhotos: [],
         showDetails: false,
         touchStartX: 0,
+        filterFlag: null,
 
         get activeFlagStyle() {
             const f = this.flagDefs.find(d => d.color === this.activeFlag);
@@ -279,16 +302,20 @@ function galleryApp() {
         },
 
         prevPhoto() {
-            if (this.currentIndex > 0) {
-                this.currentIndex--;
-                this._navigateTo(this.currentIndex);
-            }
+            let i = this.currentIndex - 1;
+            while (i >= 0 && !this._isVisible(i)) i--;
+            if (i >= 0) { this.currentIndex = i; this._navigateTo(i); }
         },
         nextPhoto() {
-            if (this.currentIndex < cards.length - 1) {
-                this.currentIndex++;
-                this._navigateTo(this.currentIndex);
-            }
+            let i = this.currentIndex + 1;
+            while (i < cards.length && !this._isVisible(i)) i++;
+            if (i < cards.length) { this.currentIndex = i; this._navigateTo(i); }
+        },
+
+        _isVisible(index) {
+            if (this.filterFlag === null) return true;
+            const id = parseInt(cards[index].dataset.photoId);
+            return this.photoFlags[id]?.includes(this.filterFlag) ?? false;
         },
 
         _navigateTo(index) {
