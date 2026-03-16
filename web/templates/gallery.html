@@ -65,12 +65,12 @@
              data-photo-id="{{ photo.id }}"
              data-preview-url="{{ photo.preview_url }}"
              data-filename="{{ photo.filename }}"
-             data-flags="{{ photo.flags }}">
+             data-flags="{{ photo.flags }}"
+             @click="selectMode ? toggleSelect(photoId) : openLightbox(photoIndex)">
             <img
                 src="{{ photo.thumbnail_url }}"
                 alt="{{ photo.filename }}"
                 loading="lazy"
-                @click="selectMode ? toggleSelect(photoId) : openLightbox(photoIndex)"
             >
             <!-- Select mode checkmark -->
             <div class="card-select-overlay" x-show="selectMode" style="pointer-events: none">
@@ -89,7 +89,7 @@
             </div>
             <div class="photo-actions">
                 <button
-                    @click="toggleFlag(photoId)"
+                    @click.stop="toggleFlag(photoId)"
                     :class="{ 'active': photoFlags[photoId]?.includes(activeFlag) }"
                     :style="activeFlagStyle"
                     class="btn-select"

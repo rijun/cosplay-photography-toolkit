@@ -951,6 +951,7 @@ h1::after {
         max-height: 95vh;
         gap: 1.25rem;
         align-items: center;
+        overflow: visible;
     }
 
     .lightbox-close {
