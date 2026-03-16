@@ -32,6 +32,7 @@
         <button @click="toggleSelectMode()" :class="{ 'active': selectMode }" class="btn-toolbar">
             <span x-text="selectMode ? 'Cancel' : 'Select'"></span>
         </button>
+        <a href="/g/{{ gallery.token }}/download" class="btn-toolbar">Download All</a>
     </div>
 
     <div class="photo-grid">
@@ -82,6 +83,7 @@
     <div x-show="selectedPhotos.length > 0" x-cloak x-transition class="selection-bar">
         <span class="selection-count" x-text="`${selectedPhotos.length} selected`"></span>
         <div class="selection-actions">
+            <a :href="`/g/{{ gallery.token }}/download?ids=${selectedPhotos.join(',')}`" class="btn-selection">Download</a>
             <button @click="selectedPhotos = []" class="btn-selection">Clear</button>
         </div>
     </div>
@@ -89,16 +91,34 @@
     <!-- Lightbox -->
     <div x-show="lightboxOpen" x-cloak class="lightbox" @keydown.left.window="prevPhoto()" @keydown.right.window="nextPhoto()">
         <div class="lightbox-backdrop" @click="closeLightbox()"></div>
-        <div class="lightbox-content">
+        <div class="lightbox-content"
+             @touchstart.passive="touchStartX = $event.touches[0].clientX"
+             @touchend.passive="onSwipe($event)">
             <button class="lightbox-close" @click="closeLightbox()">&times;</button>
             <button class="lightbox-prev" @click="prevPhoto()">&lsaquo;</button>
-            <img :src="lightboxPhoto?.preview_url" :alt="lightboxPhoto?.filename" class="lightbox-image">
+            <img :src="lightboxPhoto?.preview_url" :alt="lightboxPhoto?.filename"
+                 class="lightbox-image"
+                 @click="showDetails = false">
             <button class="lightbox-next" @click="nextPhoto()">&rsaquo;</button>
 
-            <div class="lightbox-sidebar">
+            <!-- Mobile bottom bar -->
+            <div class="lightbox-bottom">
+                <p x-text="lightboxPhoto?.filename" class="lightbox-filename-mobile"></p>
+                <div class="lightbox-bottom-actions">
+                    <button @click="prevPhoto()" class="lightbox-nav-btn">&lsaquo;</button>
+                    <button @click="showDetails = !showDetails"
+                            :class="{ 'active': showDetails }"
+                            class="lightbox-details-btn">&#9776;</button>
+                    <button @click="nextPhoto()" class="lightbox-nav-btn">&rsaquo;</button>
+                </div>
+            </div>
+
+            <!-- Sidebar — bottom sheet on mobile, panel on desktop -->
+            <div class="lightbox-sidebar" :class="{ 'is-open': showDetails }">
+                <div class="lightbox-sidebar-handle"></div>
                 <p x-text="lightboxPhoto?.filename" class="photo-filename"></p>
 
-                <!-- Flag toggles in lightbox -->
+                <!-- Flag toggles -->
                 <div class="lightbox-flags">
                     <template x-for="f in flagDefs" :key="f.color">
                         <button
@@ -192,6 +212,8 @@ function galleryApp() {
         newComment: "",
         selectMode: false,
         selectedPhotos: [],
+        showDetails: false,
+        touchStartX: 0,
 
         get activeFlagStyle() {
             const f = this.flagDefs.find(d => d.color === this.activeFlag);
@@ -246,6 +268,14 @@ function galleryApp() {
 
         closeLightbox() {
             this.lightboxOpen = false;
+            this.showDetails = false;
+        },
+
+        onSwipe(e) {
+            const dx = e.changedTouches[0].clientX - this.touchStartX;
+            if (Math.abs(dx) < 48) return;
+            if (dx < 0) this.nextPhoto();
+            else this.prevPhoto();
         },
 
         prevPhoto() {
@@ -270,6 +300,7 @@ function galleryApp() {
                 filename: card.dataset.filename,
                 comments: [],
             };
+            this.showDetails = false;
             this._fetchComments(id);
         },
 

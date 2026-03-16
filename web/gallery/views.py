@@ -1,10 +1,16 @@
+import io
 import json
+import zipfile
+from pathlib import Path
 
 import nh3
-from django.http import JsonResponse, Http404
+from django.conf import settings
+from django.http import HttpResponse, JsonResponse, Http404
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
+
+from .object_storage import get_storage_client
 
 from .models import Gallery, Photo, Flag, Comment
 
@@ -96,3 +102,33 @@ def get_comments(request, token, photo_id):
         for c in photo.comments.order_by('created_at')
     ]
     return JsonResponse(comments, safe=False)
+
+
+@require_http_methods(['GET'])
+def download_photos(request, token):
+    """GET /g/{token}/download[?ids=1,2,3] - Download preview-resolution photos as a zip."""
+    gallery = get_object_or_404(Gallery, token=token)
+
+    photos = gallery.photos.order_by('display_order')
+    ids_param = request.GET.get('ids', '').strip()
+    if ids_param:
+        ids = [int(x) for x in ids_param.split(',') if x.strip().isdigit()]
+        photos = photos.filter(id__in=ids)
+
+    photos = list(photos)
+    if not photos:
+        return HttpResponse('No photos found', status=404)
+
+    client = get_storage_client()
+    bucket = settings.OBJECT_STORAGE_BUCKET_NAME
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
+        for photo in photos:
+            obj = client.get_object(Bucket=bucket, Key=photo.object_key)
+            zf.writestr(photo.filename, obj['Body'].read())
+
+    buf.seek(0)
+    response = HttpResponse(buf.read(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{gallery.slug}_photos.zip"'
+    return response
