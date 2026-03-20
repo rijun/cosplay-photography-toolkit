@@ -101,6 +101,9 @@
         {% endfor %}
     </div>
 
+    <!-- Toast notification -->
+    <div x-show="toast" x-cloak x-transition.opacity class="toast" x-text="toast"></div>
+
     <!-- Selection action bar -->
     <div x-show="selectedPhotos.length > 0" x-cloak x-transition class="selection-bar">
         <span class="selection-count" x-text="`${selectedPhotos.length} selected`"></span>
@@ -237,6 +240,8 @@ function galleryApp() {
         showDetails: false,
         touchStartX: 0,
         filterFlags: [],
+        toast: null,
+        _toastTimeout: null,
 
         get activeFlagStyle() {
             const f = this.flagDefs.find(d => d.color === this.activeFlag);
@@ -353,6 +358,12 @@ function galleryApp() {
             }
         },
 
+        _showToast(msg) {
+            this.toast = msg;
+            clearTimeout(this._toastTimeout);
+            this._toastTimeout = setTimeout(() => this.toast = null, 3000);
+        },
+
         async toggleFlag(photoId, color) {
             if (!photoId) return;
             const flagColor = color !== undefined ? color : this.activeFlag;
@@ -373,6 +384,7 @@ function galleryApp() {
                     method: "POST",
                     headers: { "X-CSRFToken": csrfToken },
                 });
+                if (!res.ok) throw new Error(res.status);
                 const data = await res.json();
                 // Sync with confirmed server state
                 const confirmed = [...(this.photoFlags[photoId] || [])];
@@ -384,7 +396,7 @@ function galleryApp() {
                 }
                 this.photoFlags[photoId] = [...confirmed];
             } catch {
-                // Revert optimistic update on network error
+                // Revert optimistic update
                 const reverted = [...(this.photoFlags[photoId] || [])];
                 const revertIdx = reverted.indexOf(flagColor);
                 if (wasActive && revertIdx === -1) {
@@ -393,23 +405,29 @@ function galleryApp() {
                     reverted.splice(revertIdx, 1);
                 }
                 this.photoFlags[photoId] = [...reverted];
+                this._showToast('Could not save — please try again');
             }
         },
 
         async addComment() {
             const body = this.newComment.trim();
             if (!body) return;
-            const res = await fetch(`/g/${token}/photos/${this.lightboxPhoto.id}/comment`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": csrfToken,
-                },
-                body: JSON.stringify({ body }),
-            });
-            const comment = await res.json();
-            this.lightboxPhoto.comments.push(comment);
-            this.newComment = "";
+            try {
+                const res = await fetch(`/g/${token}/photos/${this.lightboxPhoto.id}/comment`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken,
+                    },
+                    body: JSON.stringify({ body }),
+                });
+                if (!res.ok) throw new Error(res.status);
+                const comment = await res.json();
+                this.lightboxPhoto.comments.push(comment);
+                this.newComment = "";
+            } catch {
+                this._showToast('Could not save comment — please try again');
+            }
         },
     };
 }
