@@ -23,7 +23,7 @@ def view_gallery(request, token):
         gallery = Gallery.objects.prefetch_related(
             'photos__flags',
             'photos__comments',
-        ).get(token=token)
+        ).get(token=token, is_active=True)
     except Gallery.DoesNotExist:
         raise Http404("Gallery not found")
 
@@ -49,7 +49,7 @@ def view_gallery(request, token):
 @require_http_methods(['POST'])
 def toggle_flag(request, token, photo_id):
     """POST /g/{token}/photos/{photo_id}/flag?color=1 - Toggle a flag on a photo."""
-    gallery = get_object_or_404(Gallery, token=token)
+    gallery = get_object_or_404(Gallery, token=token, is_active=True)
     photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
 
     try:
@@ -72,7 +72,7 @@ def toggle_flag(request, token, photo_id):
 @require_http_methods(['POST'])
 def add_comment(request, token, photo_id):
     """POST /g/{token}/photos/{photo_id}/comment - Add a comment."""
-    gallery = get_object_or_404(Gallery, token=token)
+    gallery = get_object_or_404(Gallery, token=token, is_active=True)
     photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
 
     try:
@@ -96,7 +96,7 @@ def add_comment(request, token, photo_id):
 @require_http_methods(['GET'])
 def get_comments(request, token, photo_id):
     """GET /g/{token}/photos/{photo_id}/comments - Get comments for a photo."""
-    gallery = get_object_or_404(Gallery, token=token)
+    gallery = get_object_or_404(Gallery, token=token, is_active=True)
     photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
     comments = [
         {'id': c.id, 'body': c.body, 'created_at': c.created_at.isoformat()}
@@ -108,7 +108,7 @@ def get_comments(request, token, photo_id):
 @require_http_methods(['GET'])
 def download_photos(request, token):
     """GET /g/{token}/download[?ids=1,2,3] - Download photos as a streaming zip."""
-    gallery = get_object_or_404(Gallery, token=token)
+    gallery = get_object_or_404(Gallery, token=token, is_active=True)
 
     photos = gallery.photos.order_by('display_order')
     ids_param = request.GET.get('ids', '').strip()
