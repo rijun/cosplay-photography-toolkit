@@ -14,7 +14,7 @@ class ApiKeyAuthentication(BaseAuthentication):
         if not api_key:
             return None
 
-        if not secrets.compare_digest(api_key, settings.API_KEY):
+        if not any(secrets.compare_digest(api_key, k) for k in settings.API_KEYS):
             raise AuthenticationFailed('Invalid API key')
 
         return None, api_key

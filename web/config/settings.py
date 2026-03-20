@@ -142,8 +142,8 @@ OBJECT_STORAGE_ACCESS_KEY_ID = ENV('OBJECT_STORAGE_ACCESS_KEY_ID', default='')
 OBJECT_STORAGE_SECRET_ACCESS_KEY = ENV('OBJECT_STORAGE_SECRET_ACCESS_KEY', default='')
 OBJECT_STORAGE_BUCKET_NAME = ENV('OBJECT_STORAGE_BUCKET_NAME', default='')
 
-# API Authentication
-API_KEY = ENV('API_KEY')
+# API Authentication — supports comma-separated keys for zero-downtime rotation
+API_KEYS = [k.strip() for k in ENV('API_KEY').split(',') if k.strip()]
 
 # Security — production only (TLS terminated by Cloudflare / Uberspace proxy)
 if not DEBUG:
