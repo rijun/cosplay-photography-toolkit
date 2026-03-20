@@ -144,3 +144,11 @@ OBJECT_STORAGE_BUCKET_NAME = ENV('OBJECT_STORAGE_BUCKET_NAME', default='')
 
 # API Authentication
 API_KEY = ENV('API_KEY')
+
+# Security — production only (TLS terminated by Cloudflare / Uberspace proxy)
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
