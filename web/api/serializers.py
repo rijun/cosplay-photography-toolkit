@@ -5,7 +5,7 @@ from gallery.models import Gallery, Photo
 
 class GalleryCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
-    slug = serializers.CharField(max_length=255)
+    slug = serializers.RegexField(r'^[a-z0-9\-]+$', max_length=80)
 
 
 class GalleryOutSerializer(serializers.ModelSerializer):
