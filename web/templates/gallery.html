@@ -40,15 +40,15 @@
         <span class="filter-bar-label">show</span>
         <button
             class="filter-chip"
-            :class="{ 'active': filterFlag === null }"
-            @click="filterFlag = null"
+            :class="{ 'active': filterFlags.length === 0 }"
+            @click="filterFlags = []"
         >all</button>
         <template x-for="f in flagDefs" :key="f.color">
             <button
                 class="filter-chip"
-                :class="{ 'active': filterFlag === f.color }"
+                :class="{ 'active': filterFlags.includes(f.color) }"
                 :style="`--chip-color: ${f.hex}; --chip-glow: ${f.glow}`"
-                @click="filterFlag = (filterFlag === f.color ? null : f.color)"
+                @click="toggleFilter(f.color)"
             >
                 <span class="filter-chip-dot"></span>
                 <span x-text="f.label"></span>
@@ -61,7 +61,7 @@
         <div class="photo-card"
              x-data="{ photoId: {{ photo.id }}, photoIndex: {{ forloop.counter0 }} }"
              :class="{ 'photo-card--selected': isSelected(photoId), 'photo-card--select-mode': selectMode }"
-             x-show="filterFlag === null || photoFlags[photoId]?.includes(filterFlag)"
+             x-show="filterFlags.length === 0 || filterFlags.some(f => photoFlags[photoId]?.includes(f))"
              data-photo-id="{{ photo.id }}"
              data-preview-url="{{ photo.preview_url }}"
              data-filename="{{ photo.filename }}"
@@ -236,7 +236,7 @@ function galleryApp() {
         selectedPhotos: [],
         showDetails: false,
         touchStartX: 0,
-        filterFlag: null,
+        filterFlags: [],
 
         get activeFlagStyle() {
             const f = this.flagDefs.find(d => d.color === this.activeFlag);
@@ -312,10 +312,16 @@ function galleryApp() {
             if (i < cards.length) { this.currentIndex = i; this._navigateTo(i); }
         },
 
+        toggleFilter(color) {
+            const idx = this.filterFlags.indexOf(color);
+            if (idx === -1) this.filterFlags.push(color);
+            else this.filterFlags.splice(idx, 1);
+        },
+
         _isVisible(index) {
-            if (this.filterFlag === null) return true;
+            if (this.filterFlags.length === 0) return true;
             const id = parseInt(cards[index].dataset.photoId);
-            return this.photoFlags[id]?.includes(this.filterFlag) ?? false;
+            return this.filterFlags.some(f => this.photoFlags[id]?.includes(f));
         },
 
         _navigateTo(index) {
