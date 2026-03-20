@@ -1,11 +1,12 @@
 import io
 import json
+import re
 import zipfile
 from pathlib import Path
 
 import nh3
 from django.conf import settings
-from django.http import HttpResponse, JsonResponse, Http404
+from django.http import HttpResponse, JsonResponse, Http404, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -106,7 +107,7 @@ def get_comments(request, token, photo_id):
 
 @require_http_methods(['GET'])
 def download_photos(request, token):
-    """GET /g/{token}/download[?ids=1,2,3] - Download preview-resolution photos as a zip."""
+    """GET /g/{token}/download[?ids=1,2,3] - Download photos as a streaming zip."""
     gallery = get_object_or_404(Gallery, token=token)
 
     photos = gallery.photos.order_by('display_order')
@@ -119,6 +120,18 @@ def download_photos(request, token):
     if not photos:
         return HttpResponse('No photos found', status=404)
 
+    safe_slug = re.sub(r'[^\w\-]', '_', gallery.slug)
+
+    response = StreamingHttpResponse(
+        _zip_stream(photos),
+        content_type='application/zip',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{safe_slug}_photos.zip"'
+    return response
+
+
+def _zip_stream(photos):
+    """Yield zip file contents, one photo at a time in memory."""
     client = get_storage_client()
     bucket = settings.OBJECT_STORAGE_BUCKET_NAME
 
@@ -127,8 +140,13 @@ def download_photos(request, token):
         for photo in photos:
             obj = client.get_object(Bucket=bucket, Key=photo.object_key)
             zf.writestr(photo.filename, obj['Body'].read())
+            # Flush what's been written so far
+            buf.seek(0)
+            yield buf.read()
+            # Reset buffer but keep the ZipFile state
+            buf.seek(0)
+            buf.truncate()
 
+    # Yield the central directory (written when ZipFile closes)
     buf.seek(0)
-    response = HttpResponse(buf.read(), content_type='application/zip')
-    response['Content-Disposition'] = f'attachment; filename="{gallery.slug}_photos.zip"'
-    return response
+    yield buf.read()
