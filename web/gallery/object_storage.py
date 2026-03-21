@@ -24,5 +24,5 @@ def photo_url(object_key: str) -> str:
     return get_storage_client().generate_presigned_url(
         'get_object',
         Params={'Bucket': settings.OBJECT_STORAGE_BUCKET_NAME, 'Key': object_key},
-        ExpiresIn=3600,
+        ExpiresIn=900,
     )
