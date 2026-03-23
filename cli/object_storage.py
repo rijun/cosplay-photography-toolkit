@@ -54,6 +54,6 @@ def delete_gallery(prefix: str) -> None:
         client.delete_object(Bucket=config["object_storage_bucket_name"], Key=obj['Key'])
 
 
-def build_keys(gallery_slug: str, file: Path) -> tuple[str, str, str]:
-    root_key = f"{gallery_slug}/{file.stem}"
+def build_keys(prefix: str, file: Path) -> tuple[str, str, str]:
+    root_key = f"{prefix}/{file.stem}"
     return f"{root_key}/{file.name}", f"{root_key}/thumbnail.webp", f"{root_key}/preview.webp"

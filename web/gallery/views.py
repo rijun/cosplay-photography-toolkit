@@ -38,6 +38,7 @@ def view_gallery(request, token):
             'thumbnail_url': photo.thumbnail_url,
             'preview_url': photo.preview_url,
             'flags': active_flags,
+            'is_edited': photo.is_edited,
         })
 
     return render(request, 'gallery.html', {

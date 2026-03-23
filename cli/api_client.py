@@ -22,8 +22,13 @@ class ApiClient:
 
     def create_gallery(self, name: str, slug: str) -> dict:
         resp = self._client.post("/api/galleries", json={"name": name, "slug": slug})
+        if resp.status_code == 409:
+            # Gallery already exists, that's fine
+            return {"name": name, "slug": slug, "existed": True}
         resp.raise_for_status()
-        return resp.json()
+        result = resp.json()
+        result["existed"] = False
+        return result
 
     def list_galleries(self) -> list[dict]:
         resp = self._client.get("/api/galleries")
@@ -35,7 +40,7 @@ class ApiClient:
         resp.raise_for_status()
         return resp.json()
 
-    def register_photo(self, slug: str, filename: str, object_key: str, thumbnail_key: str, preview_key: str, display_order: int) -> dict:
+    def register_photo(self, slug: str, filename: str, object_key: str, thumbnail_key: str, preview_key: str, display_order: int, is_edited: bool = False) -> dict:
         resp = self._client.post(
             f"/api/galleries/{slug}/photos",
             json={
@@ -44,6 +49,7 @@ class ApiClient:
                 "thumbnail_key": thumbnail_key,
                 "preview_key": preview_key,
                 "display_order": display_order,
+                "is_edited": is_edited,
             },
         )
         resp.raise_for_status()

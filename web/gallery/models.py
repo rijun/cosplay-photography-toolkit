@@ -23,6 +23,7 @@ class Photo(models.Model):
     thumbnail_key = models.TextField()
     preview_key = models.TextField()
     display_order = models.IntegerField(default=0)
+    is_edited = models.BooleanField(default=False)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     @property

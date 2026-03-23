@@ -56,16 +56,27 @@
         </template>
     </div>
 
+    <!-- Edited filter -->
+    <template x-if="hasEdited">
+        <div class="filter-bar edited-filter-bar">
+            <span class="filter-bar-label">type</span>
+            <button class="filter-chip" :class="{ 'active': editedFilter === 'all' }" @click="editedFilter = 'all'">all</button>
+            <button class="filter-chip" :class="{ 'active': editedFilter === 'originals' }" @click="editedFilter = 'originals'">originals</button>
+            <button class="filter-chip" :class="{ 'active': editedFilter === 'edited' }" @click="editedFilter = 'edited'">edited</button>
+        </div>
+    </template>
+
     <div class="photo-grid">
         {% for photo in photos %}
         <div class="photo-card"
              x-data="{ photoId: {{ photo.id }}, photoIndex: {{ forloop.counter0 }} }"
              :class="{ 'photo-card--selected': isSelected(photoId), 'photo-card--select-mode': selectMode }"
-             x-show="filterFlags.length === 0 || filterFlags.some(f => photoFlags[photoId]?.includes(f))"
+             x-show="(filterFlags.length === 0 || filterFlags.some(f => photoFlags[photoId]?.includes(f))) && (editedFilter === 'all' || (editedFilter === 'edited' && photoEdited[photoId]) || (editedFilter === 'originals' && !photoEdited[photoId]))"
              data-photo-id="{{ photo.id }}"
              data-preview-url="{{ photo.preview_url }}"
              data-filename="{{ photo.filename }}"
              data-flags="{{ photo.flags }}"
+             data-is-edited="{{ photo.is_edited|yesno:'true,false' }}"
              @click="selectMode ? toggleSelect(photoId) : openLightbox(photoIndex)">
             <img
                 src="{{ photo.thumbnail_url }}"
@@ -221,6 +232,13 @@ function galleryApp() {
         }
     });
 
+    // Parse is_edited from DOM
+    const photoEdited = {};
+    cards.forEach(el => {
+        const id = parseInt(el.dataset.photoId);
+        photoEdited[id] = el.dataset.isEdited === 'true';
+    });
+
     // Restore active flag from localStorage
     const storageKey = `gallery-flag-${token}`;
     let savedFlag = parseInt(localStorage.getItem(storageKey));
@@ -229,6 +247,7 @@ function galleryApp() {
     return {
         flagDefs,
         photoFlags,
+        photoEdited,
         activeFlag: savedFlag,
         lightboxOpen: false,
         currentIndex: 0,
@@ -240,8 +259,13 @@ function galleryApp() {
         showDetails: false,
         touchStartX: 0,
         filterFlags: [],
+        editedFilter: 'all',
         toast: null,
         _toastTimeout: null,
+
+        get hasEdited() {
+            return Object.values(this.photoEdited).some(v => v);
+        },
 
         get activeFlagStyle() {
             const f = this.flagDefs.find(d => d.color === this.activeFlag);
@@ -324,9 +348,11 @@ function galleryApp() {
         },
 
         _isVisible(index) {
-            if (this.filterFlags.length === 0) return true;
             const id = parseInt(cards[index].dataset.photoId);
-            return this.filterFlags.some(f => this.photoFlags[id]?.includes(f));
+            if (this.filterFlags.length > 0 && !this.filterFlags.some(f => this.photoFlags[id]?.includes(f))) return false;
+            if (this.editedFilter === 'edited' && !this.photoEdited[id]) return false;
+            if (this.editedFilter === 'originals' && this.photoEdited[id]) return false;
+            return true;
         },
 
         _navigateTo(index) {

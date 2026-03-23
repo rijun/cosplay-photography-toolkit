@@ -91,6 +91,7 @@ def register_photo(request, slug):
         thumbnail_key=serializer.validated_data['thumbnail_key'],
         preview_key=serializer.validated_data['preview_key'],
         display_order=serializer.validated_data['display_order'],
+        is_edited=serializer.validated_data.get('is_edited', False),
     )
 
     return Response(PhotoOutSerializer(photo).data, status=status.HTTP_201_CREATED)
