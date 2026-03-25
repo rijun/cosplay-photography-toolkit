@@ -137,19 +137,38 @@ def upload(path: Path, convention: str | None, shooting: bool, edited: bool, dry
         _upload_convention(path, files, meta_by_file, convention, edited, dry_run)
 
 
+def _get_file_day(entry: dict) -> tuple[str, str, int]:
+    """Get German day (full + abbrev) and year from a metadata entry.
+
+    Returns (day_full, day_abbrev, year).
+    """
+    capture_date = _parse_date(entry.get("DateTimeOriginal"))
+    if capture_date:
+        day_en = capture_date.strftime('%A')
+        return (
+            GERMAN_DAYS.get(day_en, day_en),
+            GERMAN_DAYS_ABBREV.get(day_en, capture_date.strftime('%a')),
+            capture_date.year,
+        )
+    return ("Unbekannt", "unknown", datetime.now().year)
+
+
 def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
                        convention: str, edited: bool, dry_run: bool):
-    """Convention mode: auto-group by cosplayer, one gallery per cosplayer."""
-    # Group photos by cosplayer
-    cosplayer_photos: dict[str, list[Path]] = defaultdict(list)
+    """Convention mode: auto-group by day + cosplayer, one gallery per combination."""
+    # Group photos by (day, cosplayer) — each file gets its own day from EXIF
+    # Key: (day_full, day_abbrev, cosplayer) → list of files
+    gallery_photos: dict[tuple[str, str, str], list[Path]] = defaultdict(list)
+    file_day: dict[Path, tuple[str, str, int]] = {}  # file → (day_full, day_abbrev, year)
     skipped = []
-    capture_date: datetime | None = None
+    year: int = datetime.now().year
 
     for file in files:
         entry = meta_by_file.get(file.name, {})
 
-        if capture_date is None:
-            capture_date = _parse_date(entry.get("DateTimeOriginal"))
+        day_full, day_abbrev, file_year = _get_file_day(entry)
+        file_day[file] = (day_full, day_abbrev, file_year)
+        year = file_year  # last seen year (they should all be the same convention year)
 
         keywords = entry.get("Keywords")
         cosplayers = _parse_cosplayers(keywords)
@@ -159,61 +178,52 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
             continue
 
         for cosplayer in cosplayers:
-            cosplayer_photos[cosplayer].append(file)
+            gallery_photos[(day_full, day_abbrev, cosplayer)].append(file)
 
-    if not cosplayer_photos:
+    if not gallery_photos:
         click.echo("No photos with cosplayer keywords found.")
         if skipped:
             click.echo(f"  {len(skipped)} photo(s) had no keywords and were skipped.")
         return
 
-    # Determine day
-
-    if capture_date:
-        day_en = capture_date.strftime('%A')
-        day_abbrev = GERMAN_DAYS_ABBREV.get(day_en, capture_date.strftime('%a'))
-        day_full = GERMAN_DAYS.get(day_en, day_en)
-        year = capture_date.year
-    else:
-        click.echo("Warning: Could not determine capture date, using 'unknown' for day.")
-        day_abbrev = "unknown"
-        day_full = "Unbekannt"
-        year = datetime.now().year
-
     conv_slug = _slugify_convention(convention)
 
-    # Build gallery info for each cosplayer
-    galleries: dict[str, dict] = {}
-    for cosplayer in sorted(cosplayer_photos.keys()):
+    # Build gallery info for each (day, cosplayer) combination
+    galleries: dict[tuple[str, str, str], dict] = {}
+    for (day_full, day_abbrev, cosplayer) in sorted(gallery_photos.keys()):
         cos_slug = _slugify_cosplayer(cosplayer)
         slug = f"{conv_slug}-{day_abbrev}-{cos_slug}"
         if len(slug) > 80:
             slug = slug[:80].rstrip("-")
         cos_display = cosplayer.lstrip("@")
         name = f"{convention} \u2013 {day_full} \u2013 {cos_display}"
-        galleries[cosplayer] = {"slug": slug, "name": name}
+        galleries[(day_full, day_abbrev, cosplayer)] = {"slug": slug, "name": name}
 
-    # Build Nextcloud path per file (based on ALL cosplayers tagged on that file)
+    # Build Nextcloud path per file (based on ALL cosplayers tagged on that file + its day)
     file_nextcloud_path: dict[Path, str] = {}
     for file in files:
         entry = meta_by_file.get(file.name, {})
         cosplayers = _parse_cosplayers(entry.get("Keywords"))
         if cosplayers:
-            file_nextcloud_path[file] = build_convention_path(convention, year, day_full, cosplayers)
+            day_full, _, file_year = file_day[file]
+            file_nextcloud_path[file] = build_convention_path(convention, file_year, day_full, cosplayers)
 
     # Count unique files
     all_unique_files = set()
-    for photo_files in cosplayer_photos.values():
+    for photo_files in gallery_photos.values():
         all_unique_files.update(photo_files)
 
-    group_photo_count = sum(1 for f in all_unique_files if sum(1 for photos in cosplayer_photos.values() if f in photos) > 1)
+    group_photo_count = sum(1 for f in all_unique_files if sum(1 for photos in gallery_photos.values() if f in photos) > 1)
+
+    # Collect days for summary
+    days_seen = sorted({day_full for (day_full, _, _) in gallery_photos.keys()})
 
     # Show summary
-    click.echo(f"\nFound {len(cosplayer_photos)} cosplayer(s) across {len(all_unique_files)} photos ({day_full}):")
-    for cosplayer in sorted(cosplayer_photos.keys()):
+    click.echo(f"\nFound {len(gallery_photos)} gallery/galleries across {len(all_unique_files)} photos ({', '.join(days_seen)}):")
+    for (day_full, day_abbrev, cosplayer) in sorted(gallery_photos.keys()):
         cos_display = cosplayer.lstrip("@")
-        count = len(cosplayer_photos[cosplayer])
-        click.echo(f"  {cos_display:30s} \u2014 {count} photos")
+        count = len(gallery_photos[(day_full, day_abbrev, cosplayer)])
+        click.echo(f"  {day_full:12s} {cos_display:30s} \u2014 {count} photos")
     if group_photo_count:
         click.echo(f"  ({group_photo_count} group photos will appear in multiple galleries)")
     if skipped:
@@ -246,7 +256,7 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     # Create galleries via API
     click.echo("Creating galleries...")
     with get_client() as client:
-        for cosplayer, info in galleries.items():
+        for key, info in galleries.items():
             result = client.create_gallery(info["name"], info["slug"])
             if result.get("existed"):
                 click.echo(f"  Gallery '{info['slug']}' already exists, will add photos to it.")
@@ -258,9 +268,13 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     for nc_path in nc_paths:
         ensure_directories(nc_path)
 
-    # Build R2 keys (thumbnail + preview only)
-    r2_prefix = f"{conv_slug}-{day_abbrev}"
-    file_r2_keys = {file: build_r2_keys(r2_prefix, file) for file in all_unique_files}
+    # Build R2 keys per file (thumbnail + preview only)
+    # Use day-specific prefix so R2 keys don't collide across days
+    file_r2_keys: dict[Path, tuple[str, str]] = {}
+    for file in all_unique_files:
+        _, day_abbrev, _ = file_day[file]
+        r2_prefix = f"{conv_slug}-{day_abbrev}"
+        file_r2_keys[file] = build_r2_keys(r2_prefix, file)
 
     # Upload files: originals to Nextcloud, variants to R2
     click.echo(f"\nUploading {len(all_unique_files)} unique photo(s)...")
@@ -282,12 +296,12 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
             else:
                 click.echo(f"  Done {file.name}")
 
-    # Register photos in each cosplayer's gallery
+    # Register photos in each gallery
     click.echo("Registering photos in galleries...")
     with get_client() as client:
-        for cosplayer in sorted(cosplayer_photos.keys()):
-            info = galleries[cosplayer]
-            photos = cosplayer_photos[cosplayer]
+        for key in sorted(gallery_photos.keys()):
+            info = galleries[key]
+            photos = gallery_photos[key]
             for i, file in enumerate(sorted(photos, key=lambda f: f.name), 1):
                 thumbnail_key, preview_key = file_r2_keys[file]
                 client.register_photo(
