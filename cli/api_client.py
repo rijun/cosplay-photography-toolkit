@@ -40,12 +40,12 @@ class ApiClient:
         resp.raise_for_status()
         return resp.json()
 
-    def register_photo(self, slug: str, filename: str, object_key: str, thumbnail_key: str, preview_key: str, display_order: int, is_edited: bool = False) -> dict:
+    def register_photo(self, slug: str, filename: str, nextcloud_path: str, thumbnail_key: str, preview_key: str, display_order: int, is_edited: bool = False) -> dict:
         resp = self._client.post(
             f"/api/galleries/{slug}/photos",
             json={
                 "filename": filename,
-                "object_key": object_key,
+                "nextcloud_path": nextcloud_path,
                 "thumbnail_key": thumbnail_key,
                 "preview_key": preview_key,
                 "display_order": display_order,

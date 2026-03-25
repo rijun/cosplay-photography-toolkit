@@ -18,7 +18,8 @@ def save_config(config: dict) -> None:
 def get_config() -> dict:
     config = load_config()
     required = ["api_url", "api_key", "object_storage_endpoint_url", "object_storage_access_key_id",
-                 "object_storage_secret_access_key", "object_storage_bucket_name"]
+                 "object_storage_secret_access_key", "object_storage_bucket_name",
+                 "nextcloud_webdav_url", "nextcloud_username", "nextcloud_app_password", "nextcloud_base_path"]
     missing = [k for k in required if k not in config]
     if missing:
         raise SystemExit(

@@ -19,16 +19,12 @@ class Photo(models.Model):
         Gallery, on_delete=models.CASCADE, related_name="photos"
     )
     filename = models.TextField()
-    object_key = models.TextField()
+    nextcloud_path = models.TextField()
     thumbnail_key = models.TextField()
     preview_key = models.TextField()
     display_order = models.IntegerField(default=0)
     is_edited = models.BooleanField(default=False)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    @property
-    def object_url(self):
-        return object_storage.photo_url(self.object_key)
 
     @property
     def thumbnail_url(self):

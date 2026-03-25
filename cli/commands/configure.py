@@ -21,5 +21,17 @@ def configure():
     config["object_storage_bucket_name"] = click.prompt(
         "Object storage bucket name", default=config.get("object_storage_bucket_name", "")
     )
+    config["nextcloud_webdav_url"] = click.prompt(
+        "Nextcloud WebDAV URL", default=config.get("nextcloud_webdav_url", "")
+    )
+    config["nextcloud_username"] = click.prompt(
+        "Nextcloud username", default=config.get("nextcloud_username", "")
+    )
+    config["nextcloud_app_password"] = click.prompt(
+        "Nextcloud app password", default=config.get("nextcloud_app_password", "")
+    )
+    config["nextcloud_base_path"] = click.prompt(
+        "Nextcloud base path", default=config.get("nextcloud_base_path", "")
+    )
     save_config(config)
     click.echo("Configuration saved.")

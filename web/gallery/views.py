@@ -2,18 +2,15 @@ import io
 import json
 import re
 import zipfile
-from pathlib import Path
 
 import nh3
-from django.conf import settings
 from django.http import HttpResponse, JsonResponse, Http404, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
 
-from .object_storage import get_storage_client
-
 from .models import Gallery, Photo, Flag, Comment
+from . import nextcloud
 
 
 @ensure_csrf_cookie
@@ -133,14 +130,11 @@ def download_photos(request, token):
 
 def _zip_stream(photos):
     """Yield zip file contents, one photo at a time in memory."""
-    client = get_storage_client()
-    bucket = settings.OBJECT_STORAGE_BUCKET_NAME
-
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
         for photo in photos:
-            obj = client.get_object(Bucket=bucket, Key=photo.object_key)
-            zf.writestr(photo.filename, obj['Body'].read())
+            data = nextcloud.download_file(photo.nextcloud_path, photo.filename)
+            zf.writestr(photo.filename, data)
             # Flush what's been written so far
             buf.seek(0)
             yield buf.read()

@@ -16,7 +16,7 @@ class GalleryOutSerializer(serializers.ModelSerializer):
 
 class PhotoRegisterSerializer(serializers.Serializer):
     filename = serializers.CharField(max_length=255)
-    object_key = serializers.CharField(max_length=255)
+    nextcloud_path = serializers.CharField(max_length=500)
     thumbnail_key = serializers.CharField(max_length=255)
     preview_key = serializers.CharField(max_length=255)
     display_order = serializers.IntegerField(default=0)
@@ -26,4 +26,4 @@ class PhotoRegisterSerializer(serializers.Serializer):
 class PhotoOutSerializer(serializers.ModelSerializer):
     class Meta:
         model = Photo
-        fields = ['id', 'filename', 'object_key', 'thumbnail_key', 'preview_key', 'display_order', 'is_edited', 'uploaded_at']
+        fields = ['id', 'filename', 'nextcloud_path', 'thumbnail_key', 'preview_key', 'display_order', 'is_edited', 'uploaded_at']

@@ -18,21 +18,6 @@ def _get_storage_client():
     )
 
 
-def upload_photo(photo_path: Path, object_key: str) -> None:
-    config = get_config()
-    client = _get_storage_client()
-    content_type = "image/jpeg"
-    if photo_path.suffix.lower() == ".png":
-        content_type = "image/png"
-
-    client.upload_file(
-        str(photo_path),
-        config["object_storage_bucket_name"],
-        object_key,
-        ExtraArgs={"ContentType": content_type},
-    )
-
-
 def upload_file_buffer(buffer: io.BytesIO, object_key: str) -> None:
     config = get_config()
     client = _get_storage_client()
@@ -54,6 +39,7 @@ def delete_gallery(prefix: str) -> None:
         client.delete_object(Bucket=config["object_storage_bucket_name"], Key=obj['Key'])
 
 
-def build_keys(prefix: str, file: Path) -> tuple[str, str, str]:
+def build_r2_keys(prefix: str, file: Path) -> tuple[str, str]:
+    """Build R2 keys for thumbnail and preview variants only."""
     root_key = f"{prefix}/{file.stem}"
-    return f"{root_key}/{file.name}", f"{root_key}/thumbnail.webp", f"{root_key}/preview.webp"
+    return f"{root_key}/thumbnail.webp", f"{root_key}/preview.webp"
