@@ -38,7 +38,7 @@ SECRET_KEY = ENV('SECRET_KEY')
 DEBUG = ENV('DEBUG')
 
 ALLOWED_HOSTS = ENV('ALLOWED_HOSTS').split(' ')
-
+CSRF_TRUSTED_ORIGINS = ENV('CSRF_TRUSTED_ORIGINS').split(' ')
 
 # Application definition
 
@@ -168,3 +168,9 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000
+
+# Disable DRF browsable API in production
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer'],
+} if not DEBUG else {}

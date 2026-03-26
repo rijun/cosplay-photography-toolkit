@@ -13,6 +13,7 @@ def load_config() -> dict:
 def save_config(config: dict) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_PATH.write_text(json.dumps(config, indent=2))
+    CONFIG_PATH.chmod(0o600)
 
 
 _use_dev = False

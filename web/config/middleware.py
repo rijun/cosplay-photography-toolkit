@@ -4,14 +4,14 @@ from django.conf import settings
 
 
 class ContentSecurityPolicyMiddleware:
-    """Add Content-Security-Policy header to all responses."""
+    """Add Content-Security-Policy and Referrer-Policy headers to all responses."""
 
     def __init__(self, get_response):
         self.get_response = get_response
         r2_origin = self._get_r2_origin()
         self.csp = "; ".join([
             "default-src 'self'",
-            f"img-src 'self' blob: data: {r2_origin}",
+            f"img-src 'self' blob: data: {r2_origin}".strip(),
             "script-src 'self' cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'",
             "style-src 'self' fonts.googleapis.com 'unsafe-inline'",
             "font-src fonts.gstatic.com",
@@ -22,6 +22,7 @@ class ContentSecurityPolicyMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         response['Content-Security-Policy'] = self.csp
+        response['Referrer-Policy'] = 'same-origin'
         return response
 
     @staticmethod

@@ -14,7 +14,8 @@ def _get_storage_client():
         endpoint_url=config["object_storage_endpoint_url"],
         aws_access_key_id=config["object_storage_access_key_id"],
         aws_secret_access_key=config["object_storage_secret_access_key"],
-        config=Config(signature_version="s3v4"),
+        region_name='auto',
+        config=Config(signature_version='s3v4'),
     )
 
 

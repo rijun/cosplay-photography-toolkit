@@ -14,6 +14,7 @@ def get_storage_client():
             endpoint_url=settings.OBJECT_STORAGE_ENDPOINT_URL,
             aws_access_key_id=settings.OBJECT_STORAGE_ACCESS_KEY_ID,
             aws_secret_access_key=settings.OBJECT_STORAGE_SECRET_ACCESS_KEY,
+            region_name='auto',
             config=Config(signature_version='s3v4'),
         )
     return _storage_client
@@ -24,5 +25,5 @@ def photo_url(object_key: str) -> str:
     return get_storage_client().generate_presigned_url(
         'get_object',
         Params={'Bucket': settings.OBJECT_STORAGE_BUCKET_NAME, 'Key': object_key},
-        ExpiresIn=3600,
+        ExpiresIn=86400,
     )

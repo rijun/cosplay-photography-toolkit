@@ -216,7 +216,7 @@ function getCookie(name) {
 }
 
 function galleryApp() {
-    const token = "{{ gallery.token }}";
+    const token = "{{ gallery.token|escapejs }}";
     const csrfToken = getCookie('csrftoken');
     const cards = [...document.querySelectorAll('.photo-card')];
 

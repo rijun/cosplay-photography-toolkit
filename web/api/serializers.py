@@ -22,6 +22,11 @@ class PhotoRegisterSerializer(serializers.Serializer):
     display_order = serializers.IntegerField(default=0)
     is_edited = serializers.BooleanField(default=False)
 
+    def validate_nextcloud_path(self, value):
+        if '..' in value.split('/'):
+            raise serializers.ValidationError('Path traversal not allowed.')
+        return value
+
 
 class PhotoOutSerializer(serializers.ModelSerializer):
     class Meta:

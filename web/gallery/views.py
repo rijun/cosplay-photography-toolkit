@@ -1,7 +1,8 @@
 import json
+from urllib.parse import quote
 
 import nh3
-from django.http import HttpResponse, JsonResponse, Http404
+from django.http import HttpResponse, JsonResponse, Http404, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -106,7 +107,9 @@ def download_photo(request, token, photo_id):
     gallery = get_object_or_404(Gallery, token=token, is_active=True)
     photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
 
-    data = nextcloud.download_file(photo.nextcloud_path, photo.filename)
-    response = HttpResponse(data, content_type='application/octet-stream')
-    response['Content-Disposition'] = f'attachment; filename="{photo.filename}"'
+    stream = nextcloud.download_file_stream(photo.nextcloud_path, photo.filename)
+    response = StreamingHttpResponse(stream, content_type='application/octet-stream')
+    # RFC 5987 encoding for safe Content-Disposition with arbitrary filenames
+    encoded_filename = quote(photo.filename, safe='')
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
     return response

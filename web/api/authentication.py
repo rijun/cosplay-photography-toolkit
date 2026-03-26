@@ -17,6 +17,8 @@ class ApiKeyAuthentication(BaseAuthentication):
         if not any(secrets.compare_digest(api_key, k) for k in settings.API_KEYS):
             raise AuthenticationFailed('Invalid API key')
 
+        # Returns (None, api_key): user is None (AnonymousUser), auth is the key.
+        # Always check request.auth (not request.user.is_authenticated) for API access.
         return None, api_key
 
 
