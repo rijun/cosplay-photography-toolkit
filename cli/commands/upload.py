@@ -98,6 +98,67 @@ def _collect_files(path: Path) -> list[Path]:
     return files
 
 
+PLAN_FILENAME = ".upload-plan.json"
+
+
+def _save_plan(path: Path, plan: dict) -> None:
+    """Save upload plan to a JSON file alongside the source photos."""
+    plan_path = (path if path.is_dir() else path.parent) / PLAN_FILENAME
+    plan_path.write_text(json.dumps(plan, indent=2))
+    click.echo(f"  Upload plan saved to {plan_path}")
+
+
+def _load_plan(path: Path) -> dict:
+    """Load a previously saved upload plan."""
+    plan_path = (path if path.is_dir() else path.parent) / PLAN_FILENAME
+    if not plan_path.exists():
+        raise click.ClickException(f"No upload plan found at {plan_path}. Run without --register-only first.")
+    return json.loads(plan_path.read_text())
+
+
+def _register_from_plan(path: Path, edited: bool) -> None:
+    """Register photos from a previously saved upload plan."""
+    plan = _load_plan(path)
+    # Allow --edited to override the plan's value
+    is_edited = edited or plan.get("edited", False)
+
+    if plan["mode"] == "convention":
+        click.echo("Registering from saved plan (convention mode)...")
+        with get_client() as client:
+            for key, gallery_info in plan["galleries"].items():
+                slug = gallery_info["slug"]
+                # Ensure gallery exists
+                client.create_gallery(gallery_info["name"], slug)
+                files = gallery_info["files"]
+                for i, filename in enumerate(files, 1):
+                    thumbnail_key, preview_key = plan["file_r2_keys"][filename]
+                    nc_path = plan["file_nextcloud_paths"][filename]
+                    client.register_photo(
+                        slug, filename, nc_path,
+                        thumbnail_key, preview_key,
+                        display_order=i, is_edited=is_edited,
+                    )
+                click.echo(f"  Registered {len(files)} photo(s) in '{slug}'")
+
+    elif plan["mode"] == "shooting":
+        click.echo("Registering from saved plan (shooting mode)...")
+        slug = plan["gallery_slug"]
+        nc_path = plan["nextcloud_path"]
+        with get_client() as client:
+            client.create_gallery(plan["gallery_name"], slug)
+            filenames = sorted(plan["file_r2_keys"].keys())
+            for i, filename in enumerate(filenames, 1):
+                thumbnail_key, preview_key = plan["file_r2_keys"][filename]
+                client.register_photo(
+                    slug, filename, nc_path,
+                    thumbnail_key, preview_key,
+                    display_order=i, is_edited=is_edited,
+                )
+            click.echo(f"  Registered {len(filenames)} photo(s) in '{slug}'")
+
+    click.echo("Done.")
+
+
 def _process_file(file: Path, nextcloud_path: str, thumbnail_key: str, preview_key: str) -> None:
     """Upload original to Nextcloud and variants to R2."""
     upload_file(file, nextcloud_path)
@@ -111,8 +172,13 @@ def _process_file(file: Path, nextcloud_path: str, thumbnail_key: str, preview_k
 @click.option("--shooting", is_flag=True, default=False, help="Planned shooting mode")
 @click.option("--edited", is_flag=True, default=False, help="Mark uploads as edited versions")
 @click.option("--dry-run", is_flag=True, default=False, help="Show upload plan without uploading")
-def upload(path: Path, convention: str | None, shooting: bool, edited: bool, dry_run: bool):
+@click.option("--register-only", is_flag=True, default=False, help="Skip uploads, register from saved plan")
+def upload(path: Path, convention: str | None, shooting: bool, edited: bool, dry_run: bool, register_only: bool):
     """Upload photos with auto-grouping by cosplayer (convention) or as a single gallery (shooting)."""
+    if register_only:
+        _register_from_plan(path, edited)
+        return
+
     if not convention and not shooting:
         raise click.UsageError("Specify either --convention/-c or --shooting.")
     if convention and shooting:
@@ -244,7 +310,34 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
 
     click.confirm("\nReady to process?", abort=True)
 
-    # Strip Lightroom metadata (after reading keywords)
+    # Save upload plan (so --register-only can recover if registration fails)
+    plan_data = {
+        "mode": "convention",
+        "edited": edited,
+        "galleries": {
+            f"{day_full}|{day_abbrev}|{cosplayer}": {
+                "slug": info["slug"],
+                "name": info["name"],
+                "files": [f.name for f in sorted(gallery_photos[(day_full, day_abbrev, cosplayer)], key=lambda f: f.name)],
+            }
+            for (day_full, day_abbrev, cosplayer), info in galleries.items()
+        },
+        "file_r2_keys": {},
+        "file_nextcloud_paths": {f.name: file_nextcloud_path[f] for f in file_nextcloud_path},
+    }
+
+    # Build R2 keys per file (thumbnail + preview only)
+    # Use day-specific prefix so R2 keys don't collide across days
+    file_r2_keys: dict[Path, tuple[str, str]] = {}
+    for file in all_unique_files:
+        _, day_abbrev_val, _ = file_day[file]
+        r2_prefix = f"{conv_slug}-{day_abbrev_val.lower()}"
+        file_r2_keys[file] = build_r2_keys(r2_prefix, file)
+        plan_data["file_r2_keys"][file.name] = list(file_r2_keys[file])
+
+    _save_plan(path, plan_data)
+
+    # Strip Lightroom metadata (after saving plan, before uploading)
     click.echo("Stripping Lightroom metadata...")
     exiftool_res = subprocess.run(
         ["exiftool", "-IPTC:Keywords=", "-XMP:Subject=", "-XMP:WeightedFlatSubject=",
@@ -267,14 +360,6 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     click.echo("Creating Nextcloud directories...")
     for nc_path in nc_paths:
         ensure_directories(nc_path)
-
-    # Build R2 keys per file (thumbnail + preview only)
-    # Use day-specific prefix so R2 keys don't collide across days
-    file_r2_keys: dict[Path, tuple[str, str]] = {}
-    for file in all_unique_files:
-        _, day_abbrev, _ = file_day[file]
-        r2_prefix = f"{conv_slug}-{day_abbrev.lower()}"
-        file_r2_keys[file] = build_r2_keys(r2_prefix, file)
 
     # Upload files: originals to Nextcloud, variants to R2
     click.echo(f"\nUploading {len(all_unique_files)} unique photo(s)...")
@@ -354,7 +439,21 @@ def _upload_shooting(path: Path, files: list[Path], meta_by_file: dict,
 
     click.confirm("\nReady to process?", abort=True)
 
-    # Strip Lightroom metadata
+    # Build R2 keys
+    file_r2_keys = {file: build_r2_keys(gallery_slug, file) for file in files}
+
+    # Save upload plan
+    plan_data = {
+        "mode": "shooting",
+        "edited": edited,
+        "gallery_slug": gallery_slug,
+        "gallery_name": gallery_name,
+        "nextcloud_path": nc_path,
+        "file_r2_keys": {f.name: list(file_r2_keys[f]) for f in files},
+    }
+    _save_plan(path, plan_data)
+
+    # Strip Lightroom metadata (after saving plan, before uploading)
     click.echo("Stripping Lightroom metadata...")
     exiftool_res = subprocess.run(
         ["exiftool", "-IPTC:Keywords=", "-XMP:Subject=", "-XMP:WeightedFlatSubject=",
@@ -375,9 +474,6 @@ def _upload_shooting(path: Path, files: list[Path], meta_by_file: dict,
     # Pre-create Nextcloud directory
     click.echo("Creating Nextcloud directory...")
     ensure_directories(nc_path)
-
-    # Build R2 keys
-    file_r2_keys = {file: build_r2_keys(gallery_slug, file) for file in files}
 
     # Upload files
     click.echo(f"\nUploading {len(files)} photo(s)...")
