@@ -5,6 +5,7 @@ from cli.commands.configure import configure
 from cli.commands.gallery import gallery
 from cli.commands.upload import upload
 from cli.commands.export import export
+from cli.commands.reregister import reregister
 
 
 @click.group()
@@ -20,3 +21,4 @@ cli.add_command(configure)
 cli.add_command(gallery)
 cli.add_command(upload)
 cli.add_command(export)
+cli.add_command(reregister)

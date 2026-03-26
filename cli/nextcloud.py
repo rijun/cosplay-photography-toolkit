@@ -1,6 +1,7 @@
 import pathlib
+import xml.etree.ElementTree as ET
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import httpx
 
@@ -43,6 +44,28 @@ def upload_file(file_path: Path, nextcloud_path: str) -> None:
     with open(file_path, "rb") as f:
         resp = httpx.put(url, content=f, auth=auth, timeout=120)
     resp.raise_for_status()
+
+
+def list_directory(nextcloud_path: str) -> list[str]:
+    """List immediate children of a Nextcloud directory via PROPFIND (Depth: 1).
+
+    Returns names (not full paths) of children.
+    """
+    auth = _get_auth()
+    url = f"{_webdav_url()}/{_encode_path(nextcloud_path)}"
+    resp = httpx.request("PROPFIND", url, auth=auth, headers={"Depth": "1"}, timeout=30)
+    resp.raise_for_status()
+
+    root = ET.fromstring(resp.text)
+    ns = {"d": "DAV:"}
+    entries = []
+    for response in root.findall("d:response", ns):
+        href = unquote(response.find("d:href", ns).text).rstrip("/")
+        name = href.rsplit("/", 1)[-1]
+        # Skip the directory itself
+        if name and not href.rstrip("/").endswith(nextcloud_path.rstrip("/")):
+            entries.append(name)
+    return sorted(entries)
 
 
 def build_convention_path(convention_name: str, year: int, day: str, cosplayers: list[str]) -> str:

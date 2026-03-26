@@ -8,7 +8,7 @@ class ApiClient:
         self._client = httpx.Client(
             base_url=base_url,
             headers={"X-Api-Key": api_key},
-            timeout=30,
+            timeout=120,
         )
 
     def close(self):
@@ -52,6 +52,11 @@ class ApiClient:
                 "is_edited": is_edited,
             },
         )
+        resp.raise_for_status()
+        return resp.json()
+
+    def delete_photos(self, slug: str) -> dict:
+        resp = self._client.delete(f"/api/galleries/{slug}/photos")
         resp.raise_for_status()
         return resp.json()
 

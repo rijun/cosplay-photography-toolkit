@@ -71,15 +71,21 @@ def galleries_view(request):
     return Response(GalleryOutSerializer(galleries, many=True).data)
 
 
-@api_view(['POST'])
+@api_view(['POST', 'DELETE'])
 @authentication_classes([ApiKeyAuthentication])
 @permission_classes([RequireApiKey])
 def register_photo(request, slug):
-    """POST /api/galleries/{slug}/photos - Register a photo."""
+    """POST /api/galleries/{slug}/photos - Register a photo.
+    DELETE /api/galleries/{slug}/photos - Delete all photos in gallery.
+    """
     try:
         gallery = Gallery.objects.get(slug=slug)
     except Gallery.DoesNotExist:
         return Response({'detail': 'Gallery not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        count, _ = gallery.photos.all().delete()
+        return Response({'deleted': count})
 
     serializer = PhotoRegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
