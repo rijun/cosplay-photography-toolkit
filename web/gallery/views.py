@@ -105,7 +105,7 @@ def get_comments(request, token, photo_id):
 
 @require_http_methods(['GET'])
 def download_photos(request, token):
-    """GET /g/{token}/download[?ids=1,2,3] - Download photos as a streaming zip."""
+    """GET /g/{token}/download[?ids=1,2,3] - Download photos as a zip."""
     gallery = get_object_or_404(Gallery, token=token, is_active=True)
 
     photos = gallery.photos.order_by('display_order')
@@ -120,28 +120,26 @@ def download_photos(request, token):
 
     safe_slug = re.sub(r'[^\w\-]', '_', gallery.slug)
 
-    response = StreamingHttpResponse(
-        _zip_stream(photos),
-        content_type='application/zip',
-    )
-    response['Content-Disposition'] = f'attachment; filename="{safe_slug}_photos.zip"'
-    return response
+    # If all photos share the same nextcloud_path and we're downloading all of them,
+    # use Nextcloud's native folder ZIP download
+    nc_paths = {p.nextcloud_path for p in photos}
+    all_in_gallery = not ids_param
+    if len(nc_paths) == 1 and all_in_gallery:
+        response = StreamingHttpResponse(
+            nextcloud.download_folder_zip(nc_paths.pop()),
+            content_type='application/zip',
+        )
+        response['Content-Disposition'] = f'attachment; filename="{safe_slug}_photos.zip"'
+        return response
 
-
-def _zip_stream(photos):
-    """Yield zip file contents, one photo at a time in memory."""
+    # Otherwise, build ZIP in memory (for selected photos or mixed paths)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
         for photo in photos:
             data = nextcloud.download_file(photo.nextcloud_path, photo.filename)
             zf.writestr(photo.filename, data)
-            # Flush what's been written so far
-            buf.seek(0)
-            yield buf.read()
-            # Reset buffer but keep the ZipFile state
-            buf.seek(0)
-            buf.truncate()
 
-    # Yield the central directory (written when ZipFile closes)
     buf.seek(0)
-    yield buf.read()
+    response = HttpResponse(buf.read(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{safe_slug}_photos.zip"'
+    return response
