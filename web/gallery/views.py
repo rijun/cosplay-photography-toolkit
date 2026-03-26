@@ -4,7 +4,7 @@ import re
 import zipfile
 
 import nh3
-from django.http import HttpResponse, JsonResponse, Http404, StreamingHttpResponse
+from django.http import HttpResponse, JsonResponse, Http404
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -120,19 +120,6 @@ def download_photos(request, token):
 
     safe_slug = re.sub(r'[^\w\-]', '_', gallery.slug)
 
-    # If all photos share the same nextcloud_path and we're downloading all of them,
-    # use Nextcloud's native folder ZIP download
-    nc_paths = {p.nextcloud_path for p in photos}
-    all_in_gallery = not ids_param
-    if len(nc_paths) == 1 and all_in_gallery:
-        response = StreamingHttpResponse(
-            nextcloud.download_folder_zip(nc_paths.pop()),
-            content_type='application/zip',
-        )
-        response['Content-Disposition'] = f'attachment; filename="{safe_slug}_photos.zip"'
-        return response
-
-    # Otherwise, build ZIP in memory (for selected photos or mixed paths)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
         for photo in photos:
