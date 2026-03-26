@@ -192,7 +192,7 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     galleries: dict[tuple[str, str, str], dict] = {}
     for (day_full, day_abbrev, cosplayer) in sorted(gallery_photos.keys()):
         cos_slug = _slugify_cosplayer(cosplayer)
-        slug = f"{conv_slug}-{day_abbrev}-{cos_slug}"
+        slug = f"{conv_slug}-{day_abbrev.lower()}-{cos_slug}"
         if len(slug) > 80:
             slug = slug[:80].rstrip("-")
         cos_display = cosplayer.lstrip("@")
@@ -273,7 +273,7 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     file_r2_keys: dict[Path, tuple[str, str]] = {}
     for file in all_unique_files:
         _, day_abbrev, _ = file_day[file]
-        r2_prefix = f"{conv_slug}-{day_abbrev}"
+        r2_prefix = f"{conv_slug}-{day_abbrev.lower()}"
         file_r2_keys[file] = build_r2_keys(r2_prefix, file)
 
     # Upload files: originals to Nextcloud, variants to R2
