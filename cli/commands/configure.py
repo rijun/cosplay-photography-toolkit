@@ -4,9 +4,21 @@ from cli.config import load_config, save_config
 
 
 @click.command()
-def configure():
+@click.option("--dev", is_flag=True, default=False, help="Configure dev environment overrides")
+def configure(dev: bool):
     """Set up CLI configuration."""
     config = load_config()
+
+    if dev:
+        dev_config = config.get("dev", {})
+        click.echo("Configuring dev environment overrides (leave blank to use prod value):")
+        dev_config["api_url"] = click.prompt("Dev API URL", default=dev_config.get("api_url", "http://localhost:8000"))
+        dev_config["api_key"] = click.prompt("Dev API key", default=dev_config.get("api_key", ""))
+        config["dev"] = dev_config
+        save_config(config)
+        click.echo("Dev configuration saved.")
+        return
+
     config["api_url"] = click.prompt("App API URL", default=config.get("api_url", ""))
     config["api_key"] = click.prompt("API key", default=config.get("api_key", ""))
     config["object_storage_endpoint_url"] = click.prompt(

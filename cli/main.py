@@ -1,5 +1,6 @@
 import click
 
+from cli.config import set_dev
 from cli.commands.configure import configure
 from cli.commands.gallery import gallery
 from cli.commands.upload import upload
@@ -7,9 +8,12 @@ from cli.commands.export import export
 
 
 @click.group()
-def cli():
+@click.option("--dev", is_flag=True, default=False, help="Use dev environment overrides")
+def cli(dev: bool):
     """Photo gallery CLI for managing galleries and uploading photos."""
-    pass
+    if dev:
+        set_dev(True)
+        click.echo("Using dev environment.")
 
 
 cli.add_command(configure)

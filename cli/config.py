@@ -15,8 +15,22 @@ def save_config(config: dict) -> None:
     CONFIG_PATH.write_text(json.dumps(config, indent=2))
 
 
+_use_dev = False
+
+
+def set_dev(enabled: bool) -> None:
+    global _use_dev
+    _use_dev = enabled
+
+
 def get_config() -> dict:
     config = load_config()
+
+    # Merge dev overrides if --dev flag is active
+    if _use_dev and "dev" in config:
+        config = {**config, **config["dev"]}
+    config.pop("dev", None)
+
     required = ["api_url", "api_key", "object_storage_endpoint_url", "object_storage_access_key_id",
                  "object_storage_secret_access_key", "object_storage_bucket_name",
                  "nextcloud_webdav_url", "nextcloud_username", "nextcloud_app_password", "nextcloud_base_path"]
