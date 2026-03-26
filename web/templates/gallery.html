@@ -5,7 +5,7 @@
 {% block content %}
 <div x-data="galleryApp()" class="gallery-container" @keydown.escape.window="onEscape()">
     <h1>{{ gallery.name }}</h1>
-    <p class="gallery-tagline">~ select your favorite moments ~</p>
+    <p class="gallery-tagline">~ select your favorites ~</p>
 
     <!-- Flag Picker -->
     <div class="flag-picker">
@@ -16,7 +16,7 @@
                     class="flag-dot"
                     :class="{ 'active': activeFlag === f.color, 'flag-dot--final': f.color === 0 }"
                     :style="`--dot-color: ${f.hex}; --dot-glow: ${f.glow}`"
-                    :title="f.color === 0 ? 'final pick (photographer)' : `${f.label} — pick your color, each person uses a different one`"
+                    :title="f.color === 0 ? 'final pick' : `${f.label} — pick your color, each person uses a different one`"
                     @click="setActiveFlag(f.color)"
                 >
                     <span class="flag-dot-inner"></span>
@@ -24,7 +24,7 @@
                 </button>
             </template>
         </div>
-        <span class="flag-picker-hint">each person picks a color</span>
+        <span class="flag-picker-hint">select a color to mark your favorites</span>
     </div>
 
     <!-- Toolbar -->
@@ -218,7 +218,7 @@ function galleryApp() {
         { color: 3, label: 'sage',     hex: '#88a888', glow: 'rgba(136,168,136,0.35)' },
         { color: 4, label: 'sky',      hex: '#7a9ab8', glow: 'rgba(122,154,184,0.35)' },
         { color: 5, label: 'amber',    hex: '#c4a050', glow: 'rgba(196,160,80,0.35)' },
-        { color: 0, label: 'final',    hex: '#c45050', glow: 'rgba(196,80,80,0.35)' },
+        { color: 0, label: 'final',    hex: '#e0e0e0', glow: 'rgba(224,224,224,0.35)' },
     ];
 
     // Parse flags from DOM
