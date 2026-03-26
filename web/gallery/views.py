@@ -128,20 +128,43 @@ def download_photos(request, token):
     return response
 
 
+class _ZipBuffer:
+    """Write-through buffer that lets zipfile write while we drain chunks.
+
+    zipfile calls write() and tell(). We accumulate bytes in a small buffer
+    and let the generator drain it between files. tell() returns the total
+    bytes written (not just what's in the buffer) so zipfile's offset tracking
+    stays correct.
+    """
+
+    def __init__(self):
+        self._buf = bytearray()
+        self._pos = 0
+
+    def write(self, data):
+        self._buf.extend(data)
+        self._pos += len(data)
+
+    def tell(self):
+        return self._pos
+
+    def flush(self):
+        pass
+
+    def drain(self) -> bytes:
+        data = bytes(self._buf)
+        self._buf.clear()
+        return data
+
+
 def _zip_stream(photos):
-    """Stream a valid ZIP by tracking bytes already sent."""
-    buf = io.BytesIO()
-    sent = 0
+    """Stream a valid ZIP file one photo at a time."""
+    buf = _ZipBuffer()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
         for photo in photos:
             data = nextcloud.download_file(photo.nextcloud_path, photo.filename)
             zf.writestr(photo.filename, data)
-            # Yield only the new bytes written since last flush
-            buf.seek(sent)
-            chunk = buf.read()
-            sent += len(chunk)
-            yield chunk
+            yield buf.drain()
 
-    # Yield the central directory written on ZipFile close
-    buf.seek(sent)
-    yield buf.read()
+    # Central directory written on close
+    yield buf.drain()
