@@ -479,13 +479,18 @@ function galleryApp() {
 
             try {
                 const zip = new JSZip();
-                for (const card of photoCards) {
-                    const photoId = card.dataset.photoId;
-                    const filename = card.dataset.filename;
-                    const res = await fetch(`/g/${token}/photos/${photoId}/download`);
-                    if (!res.ok) throw new Error(`Failed to download ${filename}`);
-                    zip.file(filename, await res.blob());
-                    this.downloadProgress++;
+                // Download files in batches of 4
+                for (let i = 0; i < photoCards.length; i += 4) {
+                    const batch = photoCards.slice(i, i + 4);
+                    const results = await Promise.all(batch.map(async (card) => {
+                        const photoId = card.dataset.photoId;
+                        const filename = card.dataset.filename;
+                        const res = await fetch(`/g/${token}/photos/${photoId}/download`);
+                        if (!res.ok) throw new Error(`Failed to download ${filename}`);
+                        return { filename, data: await res.blob() };
+                    }));
+                    results.forEach(r => zip.file(r.filename, r.data));
+                    this.downloadProgress = Math.min(i + 4, photoCards.length);
                 }
                 const blob = await zip.generateAsync({ type: 'blob' });
                 const url = URL.createObjectURL(blob);
