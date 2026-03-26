@@ -2,6 +2,10 @@
 
 {% block title %}{{ gallery.name }}{% endblock %}
 
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <div x-data="galleryApp()" class="gallery-container" @keydown.escape.window="onEscape()">
     <h1>{{ gallery.name }}</h1>
@@ -32,7 +36,9 @@
         <button @click="toggleSelectMode()" :class="{ 'active': selectMode }" class="btn-toolbar">
             <span x-text="selectMode ? 'Cancel' : 'Select'"></span>
         </button>
-        <a href="/g/{{ gallery.token }}/download" class="btn-toolbar">Download All</a>
+        <button @click="downloadPhotos()" :disabled="downloading" class="btn-toolbar">
+            <span x-text="downloading ? `Downloading ${downloadProgress}/${downloadTotal}...` : 'Download All'"></span>
+        </button>
     </div>
 
     <!-- Filter bar -->
@@ -119,7 +125,9 @@
     <div x-show="selectedPhotos.length > 0" x-cloak x-transition class="selection-bar">
         <span class="selection-count" x-text="`${selectedPhotos.length} selected`"></span>
         <div class="selection-actions">
-            <a :href="`/g/{{ gallery.token }}/download?ids=${selectedPhotos.join(',')}`" class="btn-selection">Download</a>
+            <button @click="downloadPhotos(selectedPhotos)" :disabled="downloading" class="btn-selection">
+                <span x-text="downloading ? `${downloadProgress}/${downloadTotal}...` : 'Download'"></span>
+            </button>
             <button @click="selectedPhotos = []" class="btn-selection">Clear</button>
         </div>
     </div>
@@ -262,6 +270,9 @@ function galleryApp() {
         editedFilter: 'all',
         toast: null,
         _toastTimeout: null,
+        downloading: false,
+        downloadProgress: 0,
+        downloadTotal: 0,
 
         get hasEdited() {
             return Object.values(this.photoEdited).some(v => v);
@@ -453,6 +464,45 @@ function galleryApp() {
                 this.newComment = "";
             } catch {
                 this._showToast('Could not save comment — please try again');
+            }
+        },
+
+        async downloadPhotos(ids) {
+            // ids is optional — if omitted, download all photos
+            const photoCards = ids
+                ? cards.filter(c => ids.includes(parseInt(c.dataset.photoId)))
+                : cards;
+
+            this.downloading = true;
+            this.downloadProgress = 0;
+            this.downloadTotal = photoCards.length;
+
+            try {
+                const zip = new JSZip();
+                // Download files in batches of 4
+                for (let i = 0; i < photoCards.length; i += 4) {
+                    const batch = photoCards.slice(i, i + 4);
+                    const results = await Promise.all(batch.map(async (card) => {
+                        const photoId = card.dataset.photoId;
+                        const filename = card.dataset.filename;
+                        const res = await fetch(`/g/${token}/photos/${photoId}/download`);
+                        if (!res.ok) throw new Error(`Failed to download ${filename}`);
+                        return { filename, data: await res.blob() };
+                    }));
+                    results.forEach(r => zip.file(r.filename, r.data));
+                    this.downloadProgress = Math.min(i + 4, photoCards.length);
+                }
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = '{{ gallery.slug|escapejs }}_photos.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                this._showToast('Download failed — please try again');
+            } finally {
+                this.downloading = false;
             }
         },
     };

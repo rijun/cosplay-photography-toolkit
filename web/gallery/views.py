@@ -1,10 +1,7 @@
-import io
 import json
-import re
-import zipfile
 
 import nh3
-from django.http import HttpResponse, JsonResponse, Http404, StreamingHttpResponse
+from django.http import HttpResponse, JsonResponse, Http404
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -104,67 +101,12 @@ def get_comments(request, token, photo_id):
 
 
 @require_http_methods(['GET'])
-def download_photos(request, token):
-    """GET /g/{token}/download[?ids=1,2,3] - Download photos as a zip."""
+def download_photo(request, token, photo_id):
+    """GET /g/{token}/photos/{photo_id}/download - Download a single photo."""
     gallery = get_object_or_404(Gallery, token=token, is_active=True)
+    photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
 
-    photos = gallery.photos.order_by('display_order')
-    ids_param = request.GET.get('ids', '').strip()
-    if ids_param:
-        ids = [int(x) for x in ids_param.split(',') if x.strip().isdigit()]
-        photos = photos.filter(id__in=ids)
-
-    photos = list(photos)
-    if not photos:
-        return HttpResponse('No photos found', status=404)
-
-    safe_slug = re.sub(r'[^\w\-]', '_', gallery.slug)
-
-    response = StreamingHttpResponse(
-        _zip_stream(photos),
-        content_type='application/zip',
-    )
-    response['Content-Disposition'] = f'attachment; filename="{safe_slug}_photos.zip"'
+    data = nextcloud.download_file(photo.nextcloud_path, photo.filename)
+    response = HttpResponse(data, content_type='application/octet-stream')
+    response['Content-Disposition'] = f'attachment; filename="{photo.filename}"'
     return response
-
-
-class _ZipBuffer:
-    """Write-through buffer that lets zipfile write while we drain chunks.
-
-    zipfile calls write() and tell(). We accumulate bytes in a small buffer
-    and let the generator drain it between files. tell() returns the total
-    bytes written (not just what's in the buffer) so zipfile's offset tracking
-    stays correct.
-    """
-
-    def __init__(self):
-        self._buf = bytearray()
-        self._pos = 0
-
-    def write(self, data):
-        self._buf.extend(data)
-        self._pos += len(data)
-
-    def tell(self):
-        return self._pos
-
-    def flush(self):
-        pass
-
-    def drain(self) -> bytes:
-        data = bytes(self._buf)
-        self._buf.clear()
-        return data
-
-
-def _zip_stream(photos):
-    """Stream a valid ZIP file one photo at a time."""
-    buf = _ZipBuffer()
-    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
-        for photo in photos:
-            data = nextcloud.download_file(photo.nextcloud_path, photo.filename)
-            zf.writestr(photo.filename, data)
-            yield buf.drain()
-
-    # Central directory written on close
-    yield buf.drain()
