@@ -12,7 +12,7 @@ class ContentSecurityPolicyMiddleware:
         self.csp = "; ".join([
             "default-src 'self'",
             f"img-src 'self' blob: data: {r2_origin}",
-            "script-src 'self' cdn.jsdelivr.net 'unsafe-inline'",
+            "script-src 'self' cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'",
             "style-src 'self' fonts.googleapis.com 'unsafe-inline'",
             "font-src fonts.gstatic.com",
             "connect-src 'self'",
