@@ -859,6 +859,17 @@ h1::after {
 }
 
 /* =============================================
+   TABLET — wider grid
+   ============================================= */
+
+@media (min-width: 540px) {
+    .photo-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 0.75rem;
+    }
+}
+
+/* =============================================
    DESKTOP — full experience
    ============================================= */
 
@@ -918,12 +929,6 @@ h1::after {
     .flag-dot:hover .flag-dot-inner { opacity: 0.7; transform: scale(1.1); }
 
     .flag-dot--final { margin-left: 0.35rem; padding-left: 0.6rem; }
-
-    /* Grid */
-    .photo-grid {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1.25rem;
-    }
 
     /* Cards — polaroid hover */
     .photo-card {
