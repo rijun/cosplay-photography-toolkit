@@ -4,7 +4,7 @@ import re
 import zipfile
 
 import nh3
-from django.http import HttpResponse, JsonResponse, Http404
+from django.http import HttpResponse, JsonResponse, Http404, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -120,13 +120,28 @@ def download_photos(request, token):
 
     safe_slug = re.sub(r'[^\w\-]', '_', gallery.slug)
 
+    response = StreamingHttpResponse(
+        _zip_stream(photos),
+        content_type='application/zip',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{safe_slug}_photos.zip"'
+    return response
+
+
+def _zip_stream(photos):
+    """Stream a valid ZIP by tracking bytes already sent."""
     buf = io.BytesIO()
+    sent = 0
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
         for photo in photos:
             data = nextcloud.download_file(photo.nextcloud_path, photo.filename)
             zf.writestr(photo.filename, data)
+            # Yield only the new bytes written since last flush
+            buf.seek(sent)
+            chunk = buf.read()
+            sent += len(chunk)
+            yield chunk
 
-    buf.seek(0)
-    response = HttpResponse(buf.read(), content_type='application/zip')
-    response['Content-Disposition'] = f'attachment; filename="{safe_slug}_photos.zip"'
-    return response
+    # Yield the central directory written on ZipFile close
+    buf.seek(sent)
+    yield buf.read()
