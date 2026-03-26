@@ -36,6 +36,12 @@ class Photo(models.Model):
 
     class Meta:
         db_table = "photos"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["gallery", "filename", "is_edited"],
+                name="unique_photo_per_gallery",
+            ),
+        ]
 
 
 FLAG_COLORS = [

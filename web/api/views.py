@@ -84,17 +84,20 @@ def register_photo(request, slug):
     serializer = PhotoRegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    photo = Photo.objects.create(
+    photo, created = Photo.objects.update_or_create(
         gallery=gallery,
         filename=serializer.validated_data['filename'],
-        nextcloud_path=serializer.validated_data['nextcloud_path'],
-        thumbnail_key=serializer.validated_data['thumbnail_key'],
-        preview_key=serializer.validated_data['preview_key'],
-        display_order=serializer.validated_data['display_order'],
         is_edited=serializer.validated_data.get('is_edited', False),
+        defaults={
+            'nextcloud_path': serializer.validated_data['nextcloud_path'],
+            'thumbnail_key': serializer.validated_data['thumbnail_key'],
+            'preview_key': serializer.validated_data['preview_key'],
+            'display_order': serializer.validated_data['display_order'],
+        },
     )
 
-    return Response(PhotoOutSerializer(photo).data, status=status.HTTP_201_CREATED)
+    resp_status = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    return Response(PhotoOutSerializer(photo).data, status=resp_status)
 
 
 @api_view(['GET'])

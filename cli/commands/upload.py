@@ -1,6 +1,7 @@
 import json
 import re
 import subprocess
+import time
 import concurrent.futures
 from collections import defaultdict
 from datetime import datetime
@@ -162,8 +163,20 @@ def _register_from_plan(path: Path, edited: bool) -> None:
 def _process_file(file: Path, nextcloud_path: str, thumbnail_key: str, preview_key: str) -> None:
     """Upload original to Nextcloud and variants to R2."""
     upload_file(file, nextcloud_path)
-    upload_file_buffer(make_variant(file, THUMB_WIDTH), thumbnail_key)
-    upload_file_buffer(make_variant(file, MEDIUM_WIDTH), preview_key)
+    _upload_variants_with_retry(file, thumbnail_key, preview_key)
+
+
+def _upload_variants_with_retry(file: Path, thumbnail_key: str, preview_key: str, max_retries: int = 3) -> None:
+    """Upload R2 variants with retry and exponential backoff."""
+    for attempt in range(max_retries):
+        try:
+            upload_file_buffer(make_variant(file, THUMB_WIDTH), thumbnail_key)
+            upload_file_buffer(make_variant(file, MEDIUM_WIDTH), preview_key)
+            return
+        except OSError:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt)
 
 
 @click.command()
