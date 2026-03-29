@@ -170,6 +170,17 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
     SECURE_HSTS_SECONDS = 31536000
 
+# Celery
+CELERY_BROKER_URL = ENV('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = ENV('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Zip downloads
+ZIP_DOWNLOAD_DIR = BASE_DIR / 'zip_downloads'
+ZIP_DOWNLOAD_MAX_AGE_SECONDS = 3600  # clean up after 1 hour
+
 # Disable DRF browsable API in production
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer'],

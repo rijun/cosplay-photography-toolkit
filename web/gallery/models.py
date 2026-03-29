@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 
 from gallery import object_storage
@@ -75,3 +77,22 @@ class Comment(models.Model):
 
     class Meta:
         db_table = "comments"
+
+
+class ZipDownload(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    gallery = models.ForeignKey(
+        Gallery, on_delete=models.CASCADE, related_name="zip_downloads"
+    )
+    status = models.TextField(default='pending')  # pending, processing, completed, failed
+    progress_current = models.IntegerField(default=0)
+    progress_total = models.IntegerField(default=0)
+    error_message = models.TextField(blank=True, default='')
+    file_path = models.TextField(blank=True, default='')
+    file_size = models.BigIntegerField(default=0)
+    celery_task_id = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "zip_downloads"

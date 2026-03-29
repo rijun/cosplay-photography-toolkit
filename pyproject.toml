@@ -19,6 +19,8 @@ web = [
     "gunicorn>=25.1.0",
     "whitenoise>=6.12.0",
     "httpx>=0.28",
+    "celery[redis]>=5.4",
+    "redis>=5.0",
 ]
 cli = [
     "click>=8.1",

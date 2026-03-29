@@ -2,9 +2,7 @@
 
 {% block title %}{{ gallery.name }}{% endblock %}
 
-{% block head %}
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-{% endblock %}
+{% block head %}{% endblock %}
 
 {% block content %}
 <div x-data="galleryApp()" class="gallery-container" @keydown.escape.window="onEscape()">
@@ -37,7 +35,7 @@
             <span x-text="selectMode ? 'Cancel' : 'Select'"></span>
         </button>
         <button @click="downloadPhotos()" :disabled="downloading" class="btn-toolbar">
-            <span x-text="downloading ? `Downloading ${downloadProgress}/${downloadTotal}...` : 'Download All'"></span>
+            <span x-text="downloading ? `Preparing ${zipProgress}/${zipTotal}...` : 'Download All'"></span>
         </button>
     </div>
 
@@ -126,7 +124,7 @@
         <span class="selection-count" x-text="`${selectedPhotos.length} selected`"></span>
         <div class="selection-actions">
             <button @click="downloadPhotos(selectedPhotos)" :disabled="downloading" class="btn-selection">
-                <span x-text="downloading ? `${downloadProgress}/${downloadTotal}...` : 'Download'"></span>
+                <span x-text="downloading ? `${zipProgress}/${zipTotal}...` : 'Download'"></span>
             </button>
             <button @click="selectedPhotos = []" class="btn-selection">Clear</button>
         </div>
@@ -271,8 +269,9 @@ function galleryApp() {
         toast: null,
         _toastTimeout: null,
         downloading: false,
-        downloadProgress: 0,
-        downloadTotal: 0,
+        zipProgress: 0,
+        zipTotal: 0,
+        _pollInterval: null,
 
         get hasEdited() {
             return Object.values(this.photoEdited).some(v => v);
@@ -469,41 +468,51 @@ function galleryApp() {
 
         async downloadPhotos(ids) {
             // ids is optional — if omitted, download all photos
-            const photoCards = ids
-                ? cards.filter(c => ids.includes(parseInt(c.dataset.photoId)))
-                : cards;
-
+            const photoIds = ids || null;
             this.downloading = true;
-            this.downloadProgress = 0;
-            this.downloadTotal = photoCards.length;
+            this.zipProgress = 0;
+            this.zipTotal = 0;
 
             try {
-                const zip = new JSZip();
-                // Download files in batches of 4
-                for (let i = 0; i < photoCards.length; i += 4) {
-                    const batch = photoCards.slice(i, i + 4);
-                    const results = await Promise.all(batch.map(async (card) => {
-                        const photoId = card.dataset.photoId;
-                        const filename = card.dataset.filename;
-                        const res = await fetch(`/g/${token}/photos/${photoId}/download`);
-                        if (!res.ok) throw new Error(`Failed to download ${filename}`);
-                        return { filename, data: await res.blob() };
-                    }));
-                    results.forEach(r => zip.file(r.filename, r.data));
-                    this.downloadProgress = Math.min(i + 4, photoCards.length);
-                }
-                const blob = await zip.generateAsync({ type: 'blob' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = '{{ gallery.slug|escapejs }}_photos.zip';
-                a.click();
-                URL.revokeObjectURL(url);
-            } catch (e) {
-                this._showToast('Download failed — please try again');
-            } finally {
+                const res = await fetch(`/g/${token}/download/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({ photo_ids: photoIds }),
+                });
+                if (!res.ok) throw new Error('Failed to start download');
+                const { download_id } = await res.json();
+                this._pollZipProgress(download_id);
+            } catch {
                 this.downloading = false;
+                this._showToast('Download failed — please try again');
             }
+        },
+
+        _pollZipProgress(downloadId) {
+            this._pollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/g/${token}/download/${downloadId}/progress`);
+                    if (!res.ok) throw new Error();
+                    const data = await res.json();
+                    this.zipProgress = data.progress_current;
+                    this.zipTotal = data.progress_total;
+
+                    if (data.status === 'completed') {
+                        clearInterval(this._pollInterval);
+                        this.downloading = false;
+                        window.location.href = `/g/${token}/download/${downloadId}/file`;
+                    } else if (data.status === 'failed') {
+                        clearInterval(this._pollInterval);
+                        this.downloading = false;
+                        this._showToast('Download failed — please try again');
+                    }
+                } catch {
+                    // Network hiccup — keep polling
+                }
+            }, 1500);
         },
     };
 }

@@ -1,13 +1,15 @@
 import json
+import os
 from urllib.parse import quote
 
 import nh3
-from django.http import HttpResponse, JsonResponse, Http404, StreamingHttpResponse
+from django.http import FileResponse, JsonResponse, Http404, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
 
-from .models import Gallery, Photo, Flag, Comment
+from .models import Gallery, Photo, Flag, Comment, ZipDownload
+from .tasks import build_zip
 from . import nextcloud
 
 
@@ -112,4 +114,65 @@ def download_photo(request, token, photo_id):
     # RFC 5987 encoding for safe Content-Disposition with arbitrary filenames
     encoded_filename = quote(photo.filename, safe='')
     response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+    return response
+
+
+@require_http_methods(['POST'])
+def start_zip_download(request, token):
+    """POST /g/{token}/download/start - Kick off a background zip build."""
+    gallery = get_object_or_404(Gallery, token=token, is_active=True)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    photo_ids = data.get('photo_ids')  # None means all
+
+    if photo_ids is None:
+        photos = gallery.photos.all()
+    else:
+        photos = gallery.photos.filter(id__in=photo_ids)
+
+    if not photos.exists():
+        return JsonResponse({'error': 'No photos found'}, status=400)
+
+    photo_id_list = list(photos.values_list('id', flat=True))
+
+    dl = ZipDownload.objects.create(
+        gallery=gallery,
+        progress_total=len(photo_id_list),
+    )
+
+    build_zip.delay(str(dl.id), photo_id_list)
+
+    return JsonResponse({'download_id': str(dl.id)})
+
+
+@require_http_methods(['GET'])
+def zip_download_progress(request, token, download_id):
+    """GET /g/{token}/download/{download_id}/progress - Poll zip build progress."""
+    gallery = get_object_or_404(Gallery, token=token, is_active=True)
+    dl = get_object_or_404(ZipDownload, id=download_id, gallery=gallery)
+    return JsonResponse({
+        'status': dl.status,
+        'progress_current': dl.progress_current,
+        'progress_total': dl.progress_total,
+        'file_size': dl.file_size,
+    })
+
+
+@require_http_methods(['GET'])
+def serve_zip_download(request, token, download_id):
+    """GET /g/{token}/download/{download_id}/file - Serve the completed zip."""
+    gallery = get_object_or_404(Gallery, token=token, is_active=True)
+    dl = get_object_or_404(ZipDownload, id=download_id, gallery=gallery, status='completed')
+
+    if not dl.file_path or not os.path.exists(dl.file_path):
+        return JsonResponse({'error': 'File expired'}, status=410)
+
+    response = FileResponse(open(dl.file_path, 'rb'), content_type='application/zip')
+    encoded_slug = quote(gallery.slug, safe='')
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_slug}_photos.zip"
+    response['Content-Length'] = dl.file_size
     return response
