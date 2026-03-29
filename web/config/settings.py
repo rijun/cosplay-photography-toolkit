@@ -147,6 +147,12 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 # Object Storage Configuration
 OBJECT_STORAGE_ENDPOINT_URL = ENV('OBJECT_STORAGE_ENDPOINT_URL', default='')
 OBJECT_STORAGE_ACCESS_KEY_ID = ENV('OBJECT_STORAGE_ACCESS_KEY_ID', default='')
