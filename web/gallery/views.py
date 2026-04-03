@@ -1,16 +1,16 @@
 import json
-import os
 from urllib.parse import quote
 
 import nh3
-from django.http import FileResponse, JsonResponse, Http404, StreamingHttpResponse
-from django.shortcuts import render, get_object_or_404
+from django.conf import settings
+from django.http import JsonResponse, Http404, StreamingHttpResponse
+from django.shortcuts import redirect, render, get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .models import Gallery, Photo, Flag, Comment, ZipDownload
 from .tasks import build_zip
-from . import nextcloud
+from . import nextcloud, object_storage
 
 
 @ensure_csrf_cookie
@@ -152,8 +152,7 @@ def start_zip_download(request, token):
 @require_http_methods(['GET'])
 def zip_download_progress(request, token, download_id):
     """GET /g/{token}/download/{download_id}/progress - Poll zip build progress."""
-    gallery = get_object_or_404(Gallery, token=token, is_active=True)
-    dl = get_object_or_404(ZipDownload, id=download_id, gallery=gallery)
+    dl = get_object_or_404(ZipDownload, id=download_id, gallery__token=token, gallery__is_active=True)
     return JsonResponse({
         'status': dl.status,
         'progress_current': dl.progress_current,
@@ -162,17 +161,41 @@ def zip_download_progress(request, token, download_id):
     })
 
 
+@require_http_methods(['POST'])
+def cancel_zip_download(request, token, download_id):
+    """POST /g/{token}/download/{download_id}/cancel - Cancel a zip build."""
+    dl = get_object_or_404(
+        ZipDownload, id=download_id, gallery__token=token, gallery__is_active=True,
+    )
+    if dl.status in ('pending', 'processing') and dl.celery_task_id:
+        from config.celery import app
+        app.control.revoke(dl.celery_task_id, terminate=True)
+    dl.status = 'failed'
+    dl.error_message = 'Cancelled by user'
+    dl.save(update_fields=['status', 'error_message'])
+    return JsonResponse({'status': 'cancelled'})
+
+
 @require_http_methods(['GET'])
 def serve_zip_download(request, token, download_id):
-    """GET /g/{token}/download/{download_id}/file - Serve the completed zip."""
-    gallery = get_object_or_404(Gallery, token=token, is_active=True)
-    dl = get_object_or_404(ZipDownload, id=download_id, gallery=gallery, status='completed')
+    """GET /g/{token}/download/{download_id}/file - Redirect to presigned R2 URL."""
+    dl = get_object_or_404(
+        ZipDownload, id=download_id, gallery__token=token, gallery__is_active=True, status='completed',
+    )
 
-    if not dl.file_path or not os.path.exists(dl.file_path):
+    if not dl.r2_key:
         return JsonResponse({'error': 'File expired'}, status=410)
 
-    response = FileResponse(open(dl.file_path, 'rb'), content_type='application/zip')
-    encoded_slug = quote(gallery.slug, safe='')
-    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_slug}_photos.zip"
-    response['Content-Length'] = dl.file_size
-    return response
+    encoded_slug = quote(dl.gallery.slug, safe='')
+    filename = f"{encoded_slug}_photos.zip"
+    url = object_storage.get_storage_client().generate_presigned_url(
+        'get_object',
+        Params={
+            'Bucket': settings.OBJECT_STORAGE_BUCKET_NAME,
+            'Key': dl.r2_key,
+            'ResponseContentDisposition': f"attachment; filename*=UTF-8''{filename}",
+            'ResponseContentType': 'application/zip',
+        },
+        ExpiresIn=3600,
+    )
+    return redirect(url)

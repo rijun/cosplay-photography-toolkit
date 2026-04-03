@@ -88,7 +88,7 @@ class ZipDownload(models.Model):
     progress_current = models.IntegerField(default=0)
     progress_total = models.IntegerField(default=0)
     error_message = models.TextField(blank=True, default='')
-    file_path = models.TextField(blank=True, default='')
+    r2_key = models.TextField(blank=True, default='')
     file_size = models.BigIntegerField(default=0)
     celery_task_id = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)

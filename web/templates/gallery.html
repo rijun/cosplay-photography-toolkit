@@ -35,7 +35,7 @@
             <span x-text="selectMode ? 'Cancel' : 'Select'"></span>
         </button>
         <button @click="downloadPhotos()" :disabled="downloading" class="btn-toolbar">
-            <span x-text="downloading ? `Preparing ${zipProgress}/${zipTotal}...` : 'Download All'"></span>
+            Download All
         </button>
     </div>
 
@@ -119,12 +119,36 @@
     <!-- Toast notification -->
     <div x-show="toast" x-cloak x-transition.opacity class="toast" x-text="toast"></div>
 
+    <!-- Download progress toast -->
+    <div x-show="downloading" x-cloak x-transition.opacity
+         class="download-toast"
+         :class="{ 'download-toast--above-selection': selectedPhotos.length > 0 }">
+        <template x-if="zipProgress < zipTotal || zipTotal === 0">
+            <div>
+                <div class="download-toast-header">
+                    <span x-text="`Preparing: ${zipProgress} / ${zipTotal} photos`"></span>
+                    <button @click="cancelDownload()" class="download-toast-cancel">&times;</button>
+                </div>
+                <div class="download-toast-bar">
+                    <div class="download-toast-fill" :style="`width: ${zipTotal ? (zipProgress / zipTotal * 100) : 0}%`"></div>
+                </div>
+            </div>
+        </template>
+        <template x-if="zipProgress >= zipTotal && zipTotal > 0">
+            <div class="download-toast-header">
+                <span class="download-toast-spinner"></span>
+                <span>Finalizing download...</span>
+                <button @click="cancelDownload()" class="download-toast-cancel">&times;</button>
+            </div>
+        </template>
+    </div>
+
     <!-- Selection action bar -->
     <div x-show="selectedPhotos.length > 0" x-cloak x-transition class="selection-bar">
         <span class="selection-count" x-text="`${selectedPhotos.length} selected`"></span>
         <div class="selection-actions">
             <button @click="downloadPhotos(selectedPhotos)" :disabled="downloading" class="btn-selection">
-                <span x-text="downloading ? `${zipProgress}/${zipTotal}...` : 'Download'"></span>
+                Download
             </button>
             <button @click="selectedPhotos = []" class="btn-selection">Clear</button>
         </div>
@@ -471,7 +495,7 @@ function galleryApp() {
             const photoIds = ids || null;
             this.downloading = true;
             this.zipProgress = 0;
-            this.zipTotal = 0;
+            this.zipTotal = ids ? ids.length : cards.length ;
 
             try {
                 const res = await fetch(`/g/${token}/download/start`, {
@@ -484,6 +508,7 @@ function galleryApp() {
                 });
                 if (!res.ok) throw new Error('Failed to start download');
                 const { download_id } = await res.json();
+                this._zipDownloadId = download_id;
                 this._pollZipProgress(download_id);
             } catch {
                 this.downloading = false;
@@ -491,7 +516,10 @@ function galleryApp() {
             }
         },
 
-        _pollZipProgress(downloadId) {
+        _pollZipProgress(downloadId, numberOfPhotos) {
+            let lastProgress = -1;
+            let stallSince = Date.now();
+
             this._pollInterval = setInterval(async () => {
                 try {
                     const res = await fetch(`/g/${token}/download/${downloadId}/progress`);
@@ -499,6 +527,17 @@ function galleryApp() {
                     const data = await res.json();
                     this.zipProgress = data.progress_current;
                     this.zipTotal = data.progress_total;
+
+                    // If no progress for 30s, give up
+                    if (data.progress_current !== lastProgress) {
+                        lastProgress = data.progress_current;
+                        stallSince = Date.now();
+                    } else if (Date.now() - stallSince > 30000) {
+                        clearInterval(this._pollInterval);
+                        this.downloading = false;
+                        this._showToast('Download failed — please try again');
+                        return;
+                    }
 
                     if (data.status === 'completed') {
                         clearInterval(this._pollInterval);
@@ -513,6 +552,21 @@ function galleryApp() {
                     // Network hiccup — keep polling
                 }
             }, 1500);
+        },
+
+        async cancelDownload() {
+            clearInterval(this._pollInterval);
+            this.downloading = false;
+            if (this._zipDownloadId) {
+                try {
+                    await fetch(`/g/${token}/download/${this._zipDownloadId}/cancel`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                    });
+                } catch {
+                    // Best effort
+                }
+            }
         },
     };
 }

@@ -6,17 +6,22 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 
-from gallery import nextcloud
+from gallery import nextcloud, object_storage
 from gallery.models import Photo, ZipDownload
 
 
 def _cleanup_expired_zips():
-    """Delete zip files and DB records older than ZIP_DOWNLOAD_MAX_AGE_SECONDS."""
+    """Delete DB records older than ZIP_DOWNLOAD_MAX_AGE_SECONDS and their R2 objects."""
     cutoff = timezone.now() - timedelta(seconds=settings.ZIP_DOWNLOAD_MAX_AGE_SECONDS)
     old_downloads = ZipDownload.objects.filter(created_at__lt=cutoff)
+    client = object_storage.get_storage_client()
+    bucket = settings.OBJECT_STORAGE_BUCKET_NAME
     for dl in old_downloads:
-        if dl.file_path and os.path.exists(dl.file_path):
-            os.remove(dl.file_path)
+        if dl.r2_key:
+            try:
+                client.delete_object(Bucket=bucket, Key=dl.r2_key)
+            except Exception:
+                pass
     old_downloads.delete()
 
     # Also mark stale "processing" records as failed (worker likely died)
@@ -28,7 +33,7 @@ def _cleanup_expired_zips():
 
 @shared_task(bind=True, max_retries=0, time_limit=3600, soft_time_limit=3300)
 def build_zip(self, zip_download_id, photo_ids):
-    """Fetch photos from Nextcloud and build a zip file."""
+    """Fetch photos from Nextcloud, build a zip, upload to R2."""
     _cleanup_expired_zips()
 
     dl = ZipDownload.objects.get(id=zip_download_id)
@@ -61,15 +66,27 @@ def build_zip(self, zip_download_id, photo_ids):
                 dl.progress_current = i + 1
                 dl.save(update_fields=['progress_current'])
 
+        # Upload to R2
+        r2_key = f"zip_downloads/{zip_download_id}.zip"
+        client = object_storage.get_storage_client()
+        client.upload_file(
+            zip_path,
+            settings.OBJECT_STORAGE_BUCKET_NAME,
+            r2_key,
+            ExtraArgs={'ContentType': 'application/zip'},
+        )
+
         dl.status = 'completed'
-        dl.file_path = zip_path
+        dl.r2_key = r2_key
         dl.file_size = os.path.getsize(zip_path)
         dl.completed_at = timezone.now()
-        dl.save(update_fields=['status', 'file_path', 'file_size', 'completed_at'])
+        dl.save(update_fields=['status', 'r2_key', 'file_size', 'completed_at'])
     except Exception as e:
         dl.status = 'failed'
         dl.error_message = str(e)[:500]
         dl.save(update_fields=['status', 'error_message'])
+        raise
+    finally:
+        # Always clean up local file
         if os.path.exists(zip_path):
             os.remove(zip_path)
-        raise
