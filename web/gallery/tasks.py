@@ -1,3 +1,4 @@
+import logging
 import os
 import zipfile
 from datetime import timedelta
@@ -5,6 +6,8 @@ from datetime import timedelta
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 from gallery import nextcloud, object_storage
 from gallery.models import Photo, ZipDownload
@@ -59,9 +62,9 @@ def build_zip(self, zip_download_id, photo_ids):
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED) as zf:
             for i, photo in enumerate(photos):
                 data = nextcloud.download_file(photo.nextcloud_path, photo.filename)
-                arcname = photo.filename
+                arcname = os.path.basename(photo.filename)
                 if use_edited_subfolder and photo.is_edited:
-                    arcname = f"edited/{photo.filename}"
+                    arcname = f"edited/{arcname}"
                 zf.writestr(arcname, data)
                 dl.progress_current = i + 1
                 dl.save(update_fields=['progress_current'])
@@ -81,11 +84,11 @@ def build_zip(self, zip_download_id, photo_ids):
         dl.file_size = os.path.getsize(zip_path)
         dl.completed_at = timezone.now()
         dl.save(update_fields=['status', 'r2_key', 'file_size', 'completed_at'])
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to build zip %s", zip_download_id)
         dl.status = 'failed'
-        dl.error_message = str(e)[:500]
+        dl.error_message = 'An error occurred while preparing the download'
         dl.save(update_fields=['status', 'error_message'])
-        raise
     finally:
         # Always clean up local file
         if os.path.exists(zip_path):
