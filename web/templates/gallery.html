@@ -474,10 +474,7 @@ function galleryApp() {
                         this._panzoomInstance.reset();
                     } else {
                         // Zoom to 2.5x at tap point
-                        const rect = e.target.getBoundingClientRect();
-                        const clientX = e.clientX;
-                        const clientY = e.clientY;
-                        this._panzoomInstance.zoomToPoint(2.5, { clientX, clientY });
+                        this._panzoomInstance.zoomToPoint(2.5, { clientX: e.clientX, clientY: e.clientY });
                     }
                 }
             } else {
