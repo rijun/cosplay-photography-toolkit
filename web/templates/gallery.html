@@ -166,7 +166,7 @@
                 <img :src="lightboxPhoto?.preview_url" :alt="lightboxPhoto?.filename"
                      class="lightbox-image"
                      id="lightbox-zoom-target"
-                     @click="showDetails = false">
+                     @click="onLightboxImageClick($event)">
             </div>
             <button class="lightbox-next" @click="nextPhoto()">&rsaquo;</button>
 
@@ -293,7 +293,9 @@ function galleryApp() {
         // Touch/swipe state
         _touchStartX: 0,
         _touchStartTime: 0,
-        _isZoomed: false, // will be set by panzoom integration in Task 3
+        _isZoomed: false,
+        _panzoomInstance: null,
+        _lastTapTime: 0,
         filterFlags: [],
         editedFilter: 'all',
         toast: null,
@@ -356,9 +358,12 @@ function galleryApp() {
             };
             this.lightboxOpen = true;
             this._fetchComments(id);
+            // Init panzoom after DOM updates
+            this.$nextTick(() => this._initPanzoom());
         },
 
         closeLightbox() {
+            this._destroyPanzoom();
             this.lightboxOpen = false;
             this.showDetails = false;
         },
@@ -379,6 +384,68 @@ function galleryApp() {
             if (velocity > 0.5 || Math.abs(dx) > threshold) {
                 if (dx < 0) this._slideNavigate('next');
                 else this._slideNavigate('prev');
+            }
+        },
+
+        _initPanzoom() {
+            const el = document.getElementById('lightbox-zoom-target');
+            if (!el || !window.Panzoom) return;
+            this._panzoomInstance = Panzoom(el, {
+                maxScale: 5,
+                minScale: 1,
+                contain: 'outside',
+                cursor: 'default',
+                noBind: false,
+            });
+            // Listen for zoom changes to update gesture state
+            el.parentElement.addEventListener('panzoomchange', (e) => {
+                this._isZoomed = e.detail.scale > 1.05;
+            });
+            // Enable mouse wheel zoom on desktop
+            el.parentElement.addEventListener('wheel', (e) => {
+                this._panzoomInstance.zoomWithWheel(e);
+            });
+        },
+
+        _destroyPanzoom() {
+            if (this._panzoomInstance) {
+                this._panzoomInstance.destroy();
+                this._panzoomInstance = null;
+            }
+            this._isZoomed = false;
+        },
+
+        _resetPanzoom() {
+            if (this._panzoomInstance) {
+                this._panzoomInstance.reset({ animate: false });
+                this._isZoomed = false;
+            }
+        },
+
+        onLightboxImageClick(e) {
+            const now = Date.now();
+            if (now - this._lastTapTime < 300) {
+                // Double-tap detected
+                this._lastTapTime = 0;
+                if (this._panzoomInstance) {
+                    if (this._isZoomed) {
+                        this._panzoomInstance.reset();
+                    } else {
+                        // Zoom to 2.5x at tap point
+                        const rect = e.target.getBoundingClientRect();
+                        const clientX = e.clientX;
+                        const clientY = e.clientY;
+                        this._panzoomInstance.zoomToPoint(2.5, { clientX, clientY });
+                    }
+                }
+            } else {
+                this._lastTapTime = now;
+                // Single tap — toggle details after short delay to wait for possible double-tap
+                setTimeout(() => {
+                    if (this._lastTapTime !== 0 && Date.now() - this._lastTapTime >= 280) {
+                        this.showDetails = false;
+                    }
+                }, 310);
             }
         },
 
@@ -455,6 +522,7 @@ function galleryApp() {
         },
 
         _navigateTo(index) {
+            this._resetPanzoom();
             const card = cards[index];
             const id = parseInt(card.dataset.photoId);
             this.lightboxPhoto = {
