@@ -16,6 +16,19 @@
         </div>
         <!-- Mobile menu dropdown -->
         <div class="compact-menu" x-show="mobileMenuOpen" x-cloak @click.outside="mobileMenuOpen = false" x-transition.opacity>
+            <div class="compact-menu-colors">
+                <span class="compact-menu-colors-label">your color</span>
+                <div class="compact-menu-colors-dots">
+                    <template x-for="f in flagDefs" :key="f.color">
+                        <button
+                            class="compact-menu-color-dot"
+                            :class="{ 'active': activeFlag === f.color }"
+                            :style="`--dot-color: ${f.hex}; --dot-glow: ${f.glow}`"
+                            @click="setActiveFlag(f.color)">
+                        </button>
+                    </template>
+                </div>
+            </div>
             <button @click="toggleSelectMode(); mobileMenuOpen = false"
                     class="compact-menu-item"
                     x-text="selectMode ? 'Cancel Selection' : 'Select Photos'"></button>
@@ -25,11 +38,16 @@
         </div>
         <!-- Unified chip row: flag colors + edited filter -->
         <div class="compact-chips">
+            <button class="compact-chip"
+                    :class="{ 'active': filterFlags.length === 0 }"
+                    @click="filterFlags = []">
+                all
+            </button>
             <template x-for="f in flagDefs" :key="f.color">
                 <button class="compact-chip"
-                        :class="{ 'active': activeFlag === f.color, 'filtered': filterFlags.includes(f.color) }"
+                        :class="{ 'active': filterFlags.includes(f.color) }"
                         :style="`--chip-color: ${f.hex}; --chip-glow: ${f.glow}`"
-                        @click="setActiveFlag(f.color); toggleFilter(f.color)">
+                        @click="toggleFilter(f.color)">
                     <span class="compact-chip-dot"></span>
                     <span x-text="f.label"></span>
                 </button>
@@ -337,6 +355,8 @@ function galleryApp() {
         _touchStartTime: 0,
         _isZoomed: false,
         _panzoomInstance: null,
+        _panzoomChangeHandler: null,
+        _panzoomWheelHandler: null,
         _lastTapTime: 0,
         filterFlags: [],
         editedFilter: 'all',
@@ -439,18 +459,24 @@ function galleryApp() {
                 cursor: 'default',
                 noBind: false,
             });
-            // Listen for zoom changes to update gesture state
-            el.parentElement.addEventListener('panzoomchange', (e) => {
+            // Store handler references for cleanup
+            this._panzoomChangeHandler = (e) => {
                 this._isZoomed = e.detail.scale > 1.05;
-            });
-            // Enable mouse wheel zoom on desktop
-            el.parentElement.addEventListener('wheel', (e) => {
+            };
+            this._panzoomWheelHandler = (e) => {
                 this._panzoomInstance.zoomWithWheel(e);
-            });
+            };
+            el.parentElement.addEventListener('panzoomchange', this._panzoomChangeHandler);
+            el.parentElement.addEventListener('wheel', this._panzoomWheelHandler);
         },
 
         _destroyPanzoom() {
             if (this._panzoomInstance) {
+                const el = document.getElementById('lightbox-zoom-target');
+                if (el && el.parentElement) {
+                    el.parentElement.removeEventListener('panzoomchange', this._panzoomChangeHandler);
+                    el.parentElement.removeEventListener('wheel', this._panzoomWheelHandler);
+                }
                 this._panzoomInstance.destroy();
                 this._panzoomInstance = null;
             }
@@ -509,7 +535,10 @@ function galleryApp() {
             const outClass = direction === 'next' ? 'lightbox-image-wrapper--slide-out-left' : 'lightbox-image-wrapper--slide-out-right';
             wrapperEl.classList.add(outClass);
 
+            let slideOutDone = false;
             const onSlideOut = () => {
+                if (slideOutDone) return;
+                slideOutDone = true;
                 wrapperEl.removeEventListener('transitionend', onSlideOut);
 
                 // Update photo data
@@ -526,13 +555,18 @@ function galleryApp() {
                 wrapperEl.classList.remove(inPrepClass);
                 wrapperEl.classList.add('lightbox-image-wrapper--slide-in-active');
 
+                let slideInDone = false;
                 const onSlideIn = () => {
+                    if (slideInDone) return;
+                    slideInDone = true;
                     wrapperEl.removeEventListener('transitionend', onSlideIn);
                     wrapperEl.classList.remove('lightbox-image-wrapper--slide-in-active');
                 };
                 wrapperEl.addEventListener('transitionend', onSlideIn, { once: true });
+                setTimeout(onSlideIn, 250);
             };
             wrapperEl.addEventListener('transitionend', onSlideOut, { once: true });
+            setTimeout(onSlideOut, 250);
         },
 
         prevPhoto() {

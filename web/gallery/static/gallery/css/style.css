@@ -141,7 +141,10 @@ h1::after {
 
 .desktop-header { display: none; }
 
-.compact-header { margin-bottom: 0.5rem; }
+.compact-header {
+    position: relative;
+    margin-bottom: 0.5rem;
+}
 
 .compact-header-row {
     display: flex;
@@ -214,6 +217,44 @@ h1::after {
 .compact-menu-item:last-child { border-bottom: none; }
 .compact-menu-item:active { background: rgba(186, 143, 133, 0.08); }
 
+.compact-menu-colors {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.compact-menu-colors-label {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+}
+
+.compact-menu-colors-dots {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.compact-menu-color-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--dot-color);
+    border: 2px solid transparent;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.compact-menu-color-dot.active {
+    opacity: 1;
+    border-color: var(--dot-color);
+    box-shadow: 0 0 0 2px var(--dot-glow);
+    transform: scale(1.1);
+}
+
 .compact-chips {
     display: flex;
     gap: 0.3rem;
@@ -255,9 +296,7 @@ h1::after {
     box-shadow: 0 0 0 2px var(--chip-glow, var(--rose-glow));
 }
 
-.compact-chip.filtered {
-    border-color: var(--chip-color, var(--rose));
-}
+
 
 .compact-chip-dot {
     width: 6px;
@@ -1173,6 +1212,9 @@ h1::after {
 
     /* Cards — polaroid hover */
     .photo-card {
+        padding: 0.5rem 0.5rem 0.4rem;
+        background: #fffcf9;
+        box-shadow: var(--shadow-soft);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
