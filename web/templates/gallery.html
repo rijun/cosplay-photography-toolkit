@@ -158,13 +158,16 @@
     <div x-show="lightboxOpen" x-cloak class="lightbox" @keydown.left.window="prevPhoto()" @keydown.right.window="nextPhoto()">
         <div class="lightbox-backdrop" @click="closeLightbox()"></div>
         <div class="lightbox-content"
-             @touchstart.passive="touchStartX = $event.touches[0].clientX"
-             @touchend.passive="onSwipe($event)">
+             @touchstart.passive="onTouchStart($event)"
+             @touchend.passive="onTouchEnd($event)">
             <button class="lightbox-close" @click="closeLightbox()">&times;</button>
             <button class="lightbox-prev" @click="prevPhoto()">&lsaquo;</button>
-            <img :src="lightboxPhoto?.preview_url" :alt="lightboxPhoto?.filename"
-                 class="lightbox-image"
-                 @click="showDetails = false">
+            <div class="lightbox-image-wrapper" id="lightbox-zoom-wrapper">
+                <img :src="lightboxPhoto?.preview_url" :alt="lightboxPhoto?.filename"
+                     class="lightbox-image"
+                     id="lightbox-zoom-target"
+                     @click="showDetails = false">
+            </div>
             <button class="lightbox-next" @click="nextPhoto()">&rsaquo;</button>
 
             <!-- Mobile bottom bar -->
@@ -287,7 +290,10 @@ function galleryApp() {
         selectMode: false,
         selectedPhotos: [],
         showDetails: false,
-        touchStartX: 0,
+        // Touch/swipe state
+        _touchStartX: 0,
+        _touchStartTime: 0,
+        _isZoomed: false, // will be set by panzoom integration in Task 3
         filterFlags: [],
         editedFilter: 'all',
         toast: null,
@@ -357,11 +363,70 @@ function galleryApp() {
             this.showDetails = false;
         },
 
-        onSwipe(e) {
-            const dx = e.changedTouches[0].clientX - this.touchStartX;
-            if (Math.abs(dx) < 48) return;
-            if (dx < 0) this.nextPhoto();
-            else this.prevPhoto();
+        onTouchStart(e) {
+            if (e.touches.length !== 1) return; // ignore multi-touch
+            this._touchStartX = e.touches[0].clientX;
+            this._touchStartTime = Date.now();
+        },
+
+        onTouchEnd(e) {
+            if (this._isZoomed) return; // panzoom handles gestures when zoomed
+            const dx = e.changedTouches[0].clientX - this._touchStartX;
+            const elapsed = Date.now() - this._touchStartTime;
+            const velocity = elapsed > 0 ? Math.abs(dx) / elapsed : 0;
+            const threshold = window.innerWidth * 0.3;
+
+            if (velocity > 0.5 || Math.abs(dx) > threshold) {
+                if (dx < 0) this._slideNavigate('next');
+                else this._slideNavigate('prev');
+            }
+        },
+
+        _slideNavigate(direction) {
+            // Animate the wrapper, not the image (panzoom controls the image's transform)
+            const wrapperEl = document.getElementById('lightbox-zoom-wrapper');
+            if (!wrapperEl) return;
+
+            // Find next/prev visible index
+            let targetIndex;
+            if (direction === 'next') {
+                targetIndex = this.currentIndex + 1;
+                while (targetIndex < cards.length && !this._isVisible(targetIndex)) targetIndex++;
+                if (targetIndex >= cards.length) return;
+            } else {
+                targetIndex = this.currentIndex - 1;
+                while (targetIndex >= 0 && !this._isVisible(targetIndex)) targetIndex--;
+                if (targetIndex < 0) return;
+            }
+
+            // Slide current image out
+            const outClass = direction === 'next' ? 'lightbox-image-wrapper--slide-out-left' : 'lightbox-image-wrapper--slide-out-right';
+            wrapperEl.classList.add(outClass);
+
+            const onSlideOut = () => {
+                wrapperEl.removeEventListener('transitionend', onSlideOut);
+
+                // Update photo data
+                this.currentIndex = targetIndex;
+                this._navigateTo(targetIndex);
+
+                // Position for slide-in from opposite side
+                wrapperEl.classList.remove(outClass);
+                const inPrepClass = direction === 'next' ? 'lightbox-image-wrapper--slide-in-left' : 'lightbox-image-wrapper--slide-in-right';
+                wrapperEl.classList.add(inPrepClass);
+
+                // Force reflow, then animate in
+                wrapperEl.offsetHeight;
+                wrapperEl.classList.remove(inPrepClass);
+                wrapperEl.classList.add('lightbox-image-wrapper--slide-in-active');
+
+                const onSlideIn = () => {
+                    wrapperEl.removeEventListener('transitionend', onSlideIn);
+                    wrapperEl.classList.remove('lightbox-image-wrapper--slide-in-active');
+                };
+                wrapperEl.addEventListener('transitionend', onSlideIn, { once: true });
+            };
+            wrapperEl.addEventListener('transitionend', onSlideOut, { once: true });
         },
 
         prevPhoto() {

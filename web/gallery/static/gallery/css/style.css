@@ -650,14 +650,46 @@ h1::after {
 .lightbox-close:active { background: rgba(255, 255, 255, 0.2); }
 
 /* Image fills remaining space between top and bottom bar */
-.lightbox-image {
+.lightbox-image-wrapper {
     flex: 1;
     width: 100%;
     min-height: 0;
-    object-fit: contain;
-    display: block;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     /* Offset for the close button row */
     padding-top: calc(2.5rem + var(--safe-top));
+}
+
+.lightbox-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.lightbox-image-wrapper--slide-out-left {
+    transition: transform 200ms ease-out;
+    transform: translateX(-100%);
+}
+
+.lightbox-image-wrapper--slide-out-right {
+    transition: transform 200ms ease-out;
+    transform: translateX(100%);
+}
+
+.lightbox-image-wrapper--slide-in-left {
+    transform: translateX(100%);
+}
+
+.lightbox-image-wrapper--slide-in-right {
+    transform: translateX(-100%);
+}
+
+.lightbox-image-wrapper--slide-in-active {
+    transition: transform 200ms ease-out;
+    transform: translateX(0);
 }
 
 /* Desktop nav — hidden on mobile */
@@ -1049,15 +1081,17 @@ h1::after {
         transform: rotate(90deg);
     }
 
-    .lightbox-image {
+    .lightbox-image-wrapper {
         flex: none;
-        width: auto;
+        padding-top: 0;
+        overflow: hidden;
+    }
+
+    .lightbox-image {
         max-height: 90vh;
         max-width: 65vw;
-        padding-top: 0;
         border-radius: 4px;
         box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
-        object-fit: contain;
     }
 
     .lightbox-prev,
