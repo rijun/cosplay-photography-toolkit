@@ -1140,8 +1140,8 @@ h1::after {
 
 @media (min-width: 540px) {
     .photo-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 4px;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
     }
 }
 
