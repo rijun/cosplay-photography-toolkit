@@ -2,13 +2,13 @@ import json
 from urllib.parse import quote
 
 import nh3
-from django.http import HttpResponse, JsonResponse, Http404, StreamingHttpResponse
-from django.shortcuts import render, get_object_or_404
-from django.views.decorators.http import require_http_methods
+from django.http import Http404, JsonResponse, StreamingHttpResponse
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods
 
-from .models import Gallery, Photo, Flag, Comment
 from . import nextcloud
+from .models import Comment, Flag, Gallery, Photo
 
 
 @ensure_csrf_cookie
@@ -20,7 +20,7 @@ def view_gallery(request, token):
             'photos__comments',
         ).get(token=token, is_active=True)
     except Gallery.DoesNotExist:
-        raise Http404("Gallery not found")
+        raise Http404("Gallery not found") from None
 
     photos = sorted(gallery.photos.all(), key=lambda p: p.display_order)
 

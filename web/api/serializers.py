@@ -31,4 +31,7 @@ class PhotoRegisterSerializer(serializers.Serializer):
 class PhotoOutSerializer(serializers.ModelSerializer):
     class Meta:
         model = Photo
-        fields = ['id', 'filename', 'nextcloud_path', 'thumbnail_key', 'preview_key', 'display_order', 'is_edited', 'uploaded_at']
+        fields = [
+            'id', 'filename', 'nextcloud_path', 'thumbnail_key', 'preview_key',
+            'display_order', 'is_edited', 'uploaded_at',
+        ]

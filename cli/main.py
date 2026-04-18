@@ -1,11 +1,11 @@
 import click
 
-from cli.config import set_dev
 from cli.commands.configure import configure
-from cli.commands.gallery import gallery
-from cli.commands.upload import upload
 from cli.commands.export import export
+from cli.commands.gallery import gallery
 from cli.commands.reregister import reregister
+from cli.commands.upload import upload
+from cli.config import set_dev
 
 
 @click.group()
