@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 import click
 
-from cli.api_client import get_client
+from cli.api_client import complete_slug, get_client
 from cli.config import get_config
 from cli.object_storage import delete_gallery as delete_gallery_objects
 
@@ -40,7 +40,7 @@ def gallery_list():
 
 
 @gallery.command("delete")
-@click.argument("gallery_slug")
+@click.argument("gallery_slug", shell_complete=complete_slug)
 def gallery_delete(gallery_slug: str):
     """Delete a gallery."""
     with get_client() as client:
@@ -54,7 +54,7 @@ def gallery_delete(gallery_slug: str):
 
 
 @gallery.command("archive")
-@click.argument("gallery_slug")
+@click.argument("gallery_slug", shell_complete=complete_slug)
 def gallery_archive(gallery_slug: str):
     """Archive a gallery (set is_active=False)."""
     with get_client() as client:

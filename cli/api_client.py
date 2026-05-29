@@ -80,3 +80,13 @@ class ApiClient:
 def get_client() -> ApiClient:
     config = get_config()
     return ApiClient(config["api_url"], config["api_key"])
+
+
+def complete_slug(ctx, param, incomplete: str) -> list[str]:
+    """Shell completion for gallery slugs."""
+    try:
+        with get_client() as client:
+            galleries = client.list_galleries()
+        return [g["slug"] for g in galleries if g["slug"].startswith(incomplete)]
+    except Exception:
+        return []
