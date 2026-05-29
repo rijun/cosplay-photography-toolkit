@@ -4,7 +4,7 @@ from gallery import object_storage
 
 
 class Gallery(models.Model):
-    name = models.TextField()
+    name = models.CharField(max_length=200)
     slug = models.TextField(unique=True)
     token = models.TextField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
