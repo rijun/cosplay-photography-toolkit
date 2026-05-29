@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-groups
+      - run: uv run ruff check
+      - run: uv run mypy
+
+  deploy:
+    needs: lint
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Uberspace
+        env:
+          SSH_KEY: ${{ secrets.UBERSPACE_SSH_KEY }}
+          SSH_HOST: ${{ vars.UBERSPACE_HOST }}
+          SSH_USER: ${{ vars.UBERSPACE_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 "$SSH_HOST" >> ~/.ssh/known_hosts
+          ssh "${SSH_USER}@${SSH_HOST}" 'cd ~/opt/cosplay-photography-toolkit && git pull && uv sync --group web && uv run python web/manage.py migrate && systemctl restart --user cosplay-photography-toolkit-web'

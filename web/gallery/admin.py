@@ -1,7 +1,7 @@
 from django.contrib import admin
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 
-from .models import Gallery, Photo, Flag, Comment, FLAG_COLORS
+from .models import FLAG_COLORS, Comment, Flag, Gallery, Photo
 
 
 @admin.register(Gallery)
@@ -9,7 +9,7 @@ class GalleryAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug', 'is_active', 'url', 'created_at', 'photo_count', 'flag_count']
     list_filter = ['is_active', 'created_at']
     search_fields = ['name', 'slug']
-    readonly_fields = ['token', 'url', 'created_at']
+    readonly_fields = ['slug', 'token', 'url', 'created_at', 'flag_list']
 
     @admin.display(description='URL')
     def url(self, obj):
@@ -23,6 +23,30 @@ class GalleryAdmin(admin.ModelAdmin):
     @admin.display(description='Flags')
     def flag_count(self, obj):
         return Flag.objects.filter(photo__gallery=obj).count()
+
+    @admin.display(description='Selections')
+    def flag_list(self, obj):
+        if not obj.pk:
+            return '-'
+        flags = (
+            Flag.objects
+            .filter(photo__gallery=obj)
+            .select_related('photo')
+            .order_by('color', 'photo__filename')
+        )
+        if not flags:
+            return format_html('<em>No selections yet</em>')
+
+        color_names = dict(FLAG_COLORS)
+        grouped: dict[int, list[str]] = {flag.color: [] for flag in flags}
+        for flag in flags:
+            grouped[flag.color].append(flag.photo.filename)
+
+        rows = format_html_join(
+            '', '<tr><td>{}</td><td>{}</td></tr>',
+            ((color_names[color], ', '.join(filenames)) for color, filenames in grouped.items()),
+        )
+        return format_html('<table>{}</table>', rows)
 
 
 @admin.register(Photo)

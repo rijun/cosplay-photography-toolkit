@@ -14,7 +14,8 @@ def _get_auth() -> tuple[str, str]:
 
 
 def _webdav_url() -> str:
-    return get_config()["nextcloud_webdav_url"].rstrip("/")
+    url: str = get_config()["nextcloud_webdav_url"]
+    return url.rstrip("/")
 
 
 def _encode_path(path: str) -> str:
@@ -60,7 +61,10 @@ def list_directory(nextcloud_path: str) -> list[str]:
     ns = {"d": "DAV:"}
     entries = []
     for response in root.findall("d:response", ns):
-        href = unquote(response.find("d:href", ns).text).rstrip("/")
+        href_el = response.find("d:href", ns)
+        if href_el is None or href_el.text is None:
+            continue
+        href = unquote(href_el.text).rstrip("/")
         name = href.rsplit("/", 1)[-1]
         # Skip the directory itself
         if name and not href.rstrip("/").endswith(nextcloud_path.rstrip("/")):

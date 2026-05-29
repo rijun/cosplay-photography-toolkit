@@ -1,18 +1,19 @@
+import concurrent.futures
 import json
 import re
 import subprocess
 import time
-import concurrent.futures
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import click
 
 from cli.api_client import get_client
-from cli.image_processing import make_variant, THUMB_WIDTH, MEDIUM_WIDTH
-from cli.nextcloud import upload_file, ensure_directories, build_convention_path, build_shooting_path
-from cli.object_storage import upload_file_buffer, build_r2_keys
+from cli.image_processing import MEDIUM_WIDTH, THUMB_WIDTH, make_variant
+from cli.nextcloud import build_convention_path, build_shooting_path, ensure_directories, upload_file
+from cli.object_storage import build_r2_keys, upload_file_buffer
 
 PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif"}
 
@@ -53,7 +54,7 @@ def _slugify_cosplayer(handle: str) -> str:
     return handle.strip("-")
 
 
-def _read_metadata(path: Path) -> list[dict]:
+def _read_metadata(path: Path) -> list[dict[str, Any]]:
     """Run exiftool once to read IPTC:Keywords and DateTimeOriginal from all files."""
     result = subprocess.run(
         ["exiftool", "-IPTC:Keywords", "-DateTimeOriginal", "-json", str(path)],
@@ -102,14 +103,14 @@ def _collect_files(path: Path) -> list[Path]:
 PLAN_FILENAME = ".upload-plan.json"
 
 
-def _save_plan(path: Path, plan: dict) -> None:
+def _save_plan(path: Path, plan: dict[str, Any]) -> None:
     """Save upload plan to a JSON file alongside the source photos."""
     plan_path = (path if path.is_dir() else path.parent) / PLAN_FILENAME
     plan_path.write_text(json.dumps(plan, indent=2))
     click.echo(f"  Upload plan saved to {plan_path}")
 
 
-def _load_plan(path: Path) -> dict:
+def _load_plan(path: Path) -> dict[str, Any]:
     """Load a previously saved upload plan."""
     plan_path = (path if path.is_dir() else path.parent) / PLAN_FILENAME
     if not plan_path.exists():
@@ -126,7 +127,7 @@ def _register_from_plan(path: Path, edited: bool) -> None:
     if plan["mode"] == "convention":
         click.echo("Registering from saved plan (convention mode)...")
         with get_client() as client:
-            for key, gallery_info in plan["galleries"].items():
+            for _key, gallery_info in plan["galleries"].items():
                 slug = gallery_info["slug"]
                 # Ensure gallery exists
                 client.create_gallery(gallery_info["name"], slug)
@@ -213,6 +214,7 @@ def upload(path: Path, convention: str | None, shooting: bool, edited: bool, dry
     if shooting:
         _upload_shooting(path, files, meta_by_file, edited, dry_run)
     else:
+        assert convention is not None
         _upload_convention(path, files, meta_by_file, convention, edited, dry_run)
 
 
@@ -240,14 +242,13 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     gallery_photos: dict[tuple[str, str, str], list[Path]] = defaultdict(list)
     file_day: dict[Path, tuple[str, str, int]] = {}  # file → (day_full, day_abbrev, year)
     skipped = []
-    year: int = datetime.now().year
 
     for file in files:
         entry = meta_by_file.get(file.name, {})
 
         day_full, day_abbrev, file_year = _get_file_day(entry)
         file_day[file] = (day_full, day_abbrev, file_year)
-        year = file_year  # last seen year (they should all be the same convention year)
+        _ = file_year  # last seen year (they should all be the same convention year)
 
         keywords = entry.get("Keywords")
         cosplayers = _parse_cosplayers(keywords)
@@ -292,13 +293,17 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     for photo_files in gallery_photos.values():
         all_unique_files.update(photo_files)
 
-    group_photo_count = sum(1 for f in all_unique_files if sum(1 for photos in gallery_photos.values() if f in photos) > 1)
+    group_photo_count = sum(
+        1 for f in all_unique_files
+        if sum(1 for photos in gallery_photos.values() if f in photos) > 1
+    )
 
     # Collect days for summary
-    days_seen = sorted({day_full for (day_full, _, _) in gallery_photos.keys()})
+    days_seen = sorted({day_full for (day_full, _, _) in gallery_photos})
 
     # Show summary
-    click.echo(f"\nFound {len(gallery_photos)} gallery/galleries across {len(all_unique_files)} photos ({', '.join(days_seen)}):")
+    summary = f"{len(gallery_photos)} gallery/galleries across {len(all_unique_files)} photos ({', '.join(days_seen)})"
+    click.echo(f"\nFound {summary}:")
     for (day_full, day_abbrev, cosplayer) in sorted(gallery_photos.keys()):
         cos_display = cosplayer.lstrip("@")
         count = len(gallery_photos[(day_full, day_abbrev, cosplayer)])
@@ -312,7 +317,7 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
 
     # Show Nextcloud paths
     nc_paths = sorted(set(file_nextcloud_path.values()))
-    click.echo(f"\nNextcloud upload paths:")
+    click.echo("\nNextcloud upload paths:")
     for nc_path in nc_paths:
         count = sum(1 for p in file_nextcloud_path.values() if p == nc_path)
         click.echo(f"  {nc_path}/ ({count} files)")
@@ -324,14 +329,18 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     click.confirm("\nReady to process?", abort=True)
 
     # Save upload plan (so --register-only can recover if registration fails)
-    plan_data = {
+    plan_data: dict[str, Any] = {
         "mode": "convention",
         "edited": edited,
         "galleries": {
             f"{day_full}|{day_abbrev}|{cosplayer}": {
                 "slug": info["slug"],
                 "name": info["name"],
-                "files": [f.name for f in sorted(gallery_photos[(day_full, day_abbrev, cosplayer)], key=lambda f: f.name)],
+                "files": [
+                    f.name for f in sorted(
+                        gallery_photos[(day_full, day_abbrev, cosplayer)], key=lambda f: f.name,
+                    )
+                ],
             }
             for (day_full, day_abbrev, cosplayer), info in galleries.items()
         },
@@ -362,7 +371,7 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     # Create galleries via API
     click.echo("Creating galleries...")
     with get_client() as client:
-        for key, info in galleries.items():
+        for _key, info in galleries.items():
             result = client.create_gallery(info["name"], info["slug"])
             if result.get("existed"):
                 click.echo(f"  Gallery '{info['slug']}' already exists, will add photos to it.")

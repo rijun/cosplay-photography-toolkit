@@ -1,4 +1,4 @@
-from typing import Generator
+from collections.abc import Generator
 from urllib.parse import quote
 
 import httpx
@@ -22,7 +22,7 @@ def download_file(nextcloud_path: str, filename: str) -> bytes:
     return resp.content
 
 
-def download_file_stream(nextcloud_path: str, filename: str) -> Generator[bytes, None, None]:
+def download_file_stream(nextcloud_path: str, filename: str) -> Generator[bytes]:
     """Stream a file from Nextcloud via WebDAV GET in chunks."""
     with httpx.stream(
         'GET',

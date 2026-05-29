@@ -1,3 +1,5 @@
+from typing import Any
+
 import httpx
 
 from cli.config import get_config
@@ -20,27 +22,31 @@ class ApiClient:
     def __exit__(self, *args):
         self.close()
 
-    def create_gallery(self, name: str, slug: str) -> dict:
+    def create_gallery(self, name: str, slug: str) -> dict[str, Any]:
         resp = self._client.post("/api/galleries", json={"name": name, "slug": slug})
         if resp.status_code == 409:
             # Gallery already exists, that's fine
             return {"name": name, "slug": slug, "existed": True}
         resp.raise_for_status()
-        result = resp.json()
+        result: dict[str, Any] = resp.json()
         result["existed"] = False
         return result
 
-    def list_galleries(self) -> list[dict]:
+    def list_galleries(self) -> list[dict[str, Any]]:
         resp = self._client.get("/api/galleries")
         resp.raise_for_status()
         return resp.json()
 
-    def delete_gallery(self, slug: str) -> dict:
+    def delete_gallery(self, slug: str) -> dict[str, Any]:
         resp = self._client.delete("/api/galleries", params={"slug": slug})
         resp.raise_for_status()
         return resp.json()
 
-    def register_photo(self, slug: str, filename: str, nextcloud_path: str, thumbnail_key: str, preview_key: str, display_order: int, is_edited: bool = False) -> dict:
+    def register_photo(
+        self, slug: str, filename: str, nextcloud_path: str,
+        thumbnail_key: str, preview_key: str, display_order: int,
+        is_edited: bool = False,
+    ) -> dict[str, Any]:
         resp = self._client.post(
             f"/api/galleries/{slug}/photos",
             json={
@@ -55,7 +61,7 @@ class ApiClient:
         resp.raise_for_status()
         return resp.json()
 
-    def delete_photos(self, slug: str) -> dict:
+    def delete_photos(self, slug: str) -> dict[str, Any]:
         resp = self._client.delete(f"/api/galleries/{slug}/photos")
         resp.raise_for_status()
         return resp.json()
@@ -65,7 +71,7 @@ class ApiClient:
         resp.raise_for_status()
         return resp.json()
 
-    def archive_gallery(self, slug: str) -> dict:
+    def archive_gallery(self, slug: str) -> dict[str, Any]:
         resp = self._client.patch(f"/api/galleries/{slug}/archive")
         resp.raise_for_status()
         return resp.json()
@@ -74,3 +80,13 @@ class ApiClient:
 def get_client() -> ApiClient:
     config = get_config()
     return ApiClient(config["api_url"], config["api_key"])
+
+
+def complete_slug(ctx, param, incomplete: str) -> list[str]:
+    """Shell completion for gallery slugs."""
+    try:
+        with get_client() as client:
+            galleries = client.list_galleries()
+        return [g["slug"] for g in galleries if g["slug"].startswith(incomplete)]
+    except Exception:
+        return []

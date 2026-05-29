@@ -1,16 +1,17 @@
-from pathlib import Path
 import json
+from pathlib import Path
+from typing import Any
 
 CONFIG_PATH = Path.home() / ".config" / "cosplay-photography-toolkit" / "config.json"
 
 
-def load_config() -> dict:
+def load_config() -> dict[str, Any]:
     if not CONFIG_PATH.exists():
         return {}
     return json.loads(CONFIG_PATH.read_text())
 
 
-def save_config(config: dict) -> None:
+def save_config(config: dict[str, Any]) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_PATH.write_text(json.dumps(config, indent=2))
     CONFIG_PATH.chmod(0o600)
@@ -24,7 +25,7 @@ def set_dev(enabled: bool) -> None:
     _use_dev = enabled
 
 
-def get_config() -> dict:
+def get_config() -> dict[str, Any]:
     config = load_config()
 
     # Merge dev overrides if --dev flag is active

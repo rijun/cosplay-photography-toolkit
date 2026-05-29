@@ -1,13 +1,10 @@
 import re
-from collections import defaultdict
 
 import click
 
 from cli.api_client import get_client
-from cli.nextcloud import list_directory, build_convention_path
-from cli.object_storage import build_r2_keys
 from cli.config import get_config
-
+from cli.nextcloud import build_convention_path, list_directory
 
 PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif"}
 
@@ -67,7 +64,7 @@ def reregister(convention: str, year: int, edited: bool, dry_run: bool):
     try:
         days = list_directory(conv_path)
     except Exception as e:
-        raise click.ClickException(f"Could not list {conv_path}: {e}")
+        raise click.ClickException(f"Could not list {conv_path}: {e}") from None
 
     # For each day, list cosplayer folders, then list files in each
     # gallery_key → {slug, name, files: [(filename, nextcloud_path, thumb_key, preview_key)]}
@@ -136,7 +133,9 @@ def reregister(convention: str, year: int, edited: bool, dry_run: bool):
     # Show summary
     total_registrations = sum(len(g["photos"]) for g in galleries.values())
     unique_files = {p["filename"] for g in galleries.values() for p in g["photos"]}
-    click.echo(f"\nFound {len(galleries)} galleries, {len(unique_files)} unique photos, {total_registrations} registrations:")
+    click.echo(
+        f"\nFound {len(galleries)} galleries, {len(unique_files)} unique photos, {total_registrations} registrations:"
+    )
     for slug in sorted(galleries):
         g = galleries[slug]
         click.echo(f"  {g['name']:50s} \u2014 {len(g['photos'])} photos")
