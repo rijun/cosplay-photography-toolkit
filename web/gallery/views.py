@@ -2,20 +2,15 @@ import json
 from urllib.parse import quote
 
 import nh3
-from django.http import Http404, JsonResponse, StreamingHttpResponse
-from django.shortcuts import get_object_or_404, render
 from django.conf import settings
-from django.http import JsonResponse, Http404, StreamingHttpResponse
-from django.shortcuts import redirect, render, get_object_or_404
-from django.views.decorators.http import require_http_methods
+from django.http import Http404, JsonResponse, StreamingHttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from . import nextcloud
-from .models import Comment, Flag, Gallery, Photo
-from .models import Gallery, Photo, Flag, Comment, ZipDownload
-from .tasks import build_zip
 from . import nextcloud, object_storage
+from .models import Comment, Flag, Gallery, Photo, ZipDownload
+from .tasks import build_zip
 
 
 @ensure_csrf_cookie
@@ -172,13 +167,14 @@ def cancel_zip_download(request, token, download_id):
     dl = get_object_or_404(
         ZipDownload, id=download_id, gallery__token=token, gallery__is_active=True,
     )
-    if dl.status in ('pending', 'processing') and dl.celery_task_id:
-        from config.celery import app
-        app.control.revoke(dl.celery_task_id, terminate=True)
-    dl.status = 'failed'
-    dl.error_message = 'Cancelled by user'
-    dl.save(update_fields=['status', 'error_message'])
-    return JsonResponse({'status': 'cancelled'})
+    if dl.status in ('pending', 'processing'):
+        if dl.celery_task_id:
+            from config.celery import app
+            app.control.revoke(dl.celery_task_id, terminate=True)
+        dl.status = 'failed'
+        dl.error_message = 'Cancelled by user'
+        dl.save(update_fields=['status', 'error_message'])
+    return JsonResponse({'status': dl.status})
 
 
 @require_http_methods(['GET'])

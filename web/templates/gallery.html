@@ -528,15 +528,19 @@ function galleryApp() {
                     this.zipProgress = data.progress_current;
                     this.zipTotal = data.progress_total;
 
-                    // If no progress for 30s, give up
-                    if (data.progress_current !== lastProgress) {
-                        lastProgress = data.progress_current;
-                        stallSince = Date.now();
-                    } else if (Date.now() - stallSince > 30000) {
-                        clearInterval(this._pollInterval);
-                        this.downloading = false;
-                        this._showToast('Download failed — please try again');
-                        return;
+                    // If no progress for 30s while zipping, give up.
+                    // Skip during the R2 upload phase — server enforces its own time_limit.
+                    const finalizing = data.progress_total > 0 && data.progress_current >= data.progress_total;
+                    if (!finalizing) {
+                        if (data.progress_current !== lastProgress) {
+                            lastProgress = data.progress_current;
+                            stallSince = Date.now();
+                        } else if (Date.now() - stallSince > 30000) {
+                            clearInterval(this._pollInterval);
+                            this.downloading = false;
+                            this._showToast('Download failed — please try again');
+                            return;
+                        }
                     }
 
                     if (data.status === 'completed') {
