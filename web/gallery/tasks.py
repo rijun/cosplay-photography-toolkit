@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import zipfile
@@ -7,27 +8,29 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 
-logger = logging.getLogger(__name__)
-
 from gallery import nextcloud, object_storage
 from gallery.models import Photo, ZipDownload
 
+logger = logging.getLogger(__name__)
+
 
 def _cleanup_expired_zips():
-    """Delete DB records older than ZIP_DOWNLOAD_MAX_AGE_SECONDS and their R2 objects."""
+    """Delete finished DB records older than ZIP_DOWNLOAD_MAX_AGE_SECONDS and their R2 objects."""
     cutoff = timezone.now() - timedelta(seconds=settings.ZIP_DOWNLOAD_MAX_AGE_SECONDS)
-    old_downloads = ZipDownload.objects.filter(created_at__lt=cutoff)
+    # Never time-delete pending/processing rows — a backed-up worker queue
+    # could otherwise erase the row of a task that's about to start.
+    old_downloads = ZipDownload.objects.filter(
+        created_at__lt=cutoff,
+    ).exclude(status__in=['pending', 'processing'])
     client = object_storage.get_storage_client()
     bucket = settings.OBJECT_STORAGE_BUCKET_NAME
     for dl in old_downloads:
         if dl.r2_key:
-            try:
+            with contextlib.suppress(Exception):
                 client.delete_object(Bucket=bucket, Key=dl.r2_key)
-            except Exception:
-                pass
     old_downloads.delete()
 
-    # Also mark stale "processing" records as failed (worker likely died)
+    # Mark stuck "processing" records as failed (worker likely died mid-build).
     stale_cutoff = timezone.now() - timedelta(hours=1)
     ZipDownload.objects.filter(
         status='processing', created_at__lt=stale_cutoff

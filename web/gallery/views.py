@@ -129,15 +129,20 @@ def start_zip_download(request, token):
 
     photo_ids = data.get('photo_ids')  # None means all
 
-    if photo_ids is None:
-        photos = gallery.photos.all()
-    else:
-        photos = gallery.photos.filter(id__in=photo_ids)
+    photos = gallery.photos.all() if photo_ids is None else gallery.photos.filter(id__in=photo_ids)
 
     if not photos.exists():
         return JsonResponse({'error': 'No photos found'}, status=400)
 
     photo_id_list = list(photos.values_list('id', flat=True))
+
+    # Reuse any in-flight download for this gallery — one build at a time
+    # caps disk usage and avoids redundant work if the client retries.
+    existing = ZipDownload.objects.filter(
+        gallery=gallery, status__in=['pending', 'processing'],
+    ).first()
+    if existing is not None:
+        return JsonResponse({'download_id': str(existing.id)})
 
     dl = ZipDownload.objects.create(
         gallery=gallery,
