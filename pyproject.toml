@@ -59,7 +59,7 @@ ignore = ["RUF012"]
 python_version = "3.14"
 plugins = ["mypy_django_plugin.main"]
 mypy_path = "web"
-files = ["web/gallery", "web/api", "web/config", "cli"]
+packages = ["gallery", "api", "config", "cli"]
 warn_unused_configs = true
 check_untyped_defs = true
 
