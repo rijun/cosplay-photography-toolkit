@@ -9,6 +9,8 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ci-dummy-not-secret
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
