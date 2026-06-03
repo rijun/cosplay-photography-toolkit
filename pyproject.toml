@@ -3,6 +3,9 @@ name = "cosplay-photography-toolkit"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.14"
+dependencies = [
+    "django>=6.0.2",
+]
 
 [dependency-groups]
 dev = [
@@ -11,6 +14,7 @@ dev = [
     "djangorestframework-stubs>=3.16.8",
     "mypy>=1.15",
     "ruff>=0.11",
+    "celery-types>=0.26.0",
 ]
 web = [
     "django>=6.0.2",
@@ -20,8 +24,10 @@ web = [
     "boto3>=1.35",
     "nh3>=0.3.3",
     "gunicorn>=25.1.0",
-    "whitenoise>=6.12.0",
+    "whitenoise[brotli]>=6.12.0",
     "httpx>=0.28",
+    "celery[redis]>=5.4",
+    "redis>=5.0",
 ]
 cli = [
     "click>=8.1",
@@ -53,7 +59,7 @@ ignore = ["RUF012"]
 python_version = "3.14"
 plugins = ["mypy_django_plugin.main"]
 mypy_path = "web"
-files = ["web/gallery", "web/api", "web/config", "cli"]
+packages = ["gallery", "api", "config", "cli"]
 warn_unused_configs = true
 check_untyped_defs = true
 

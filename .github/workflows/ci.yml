@@ -9,12 +9,18 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ci-dummy-not-secret
+      ALLOWED_HOSTS: localhost
+      CSRF_TRUSTED_ORIGINS: http://localhost
+      API_KEY: ci-dummy
+      USE_SQLITE: "True"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-groups
       - run: uv run ruff check
-      - run: uv run mypy
+      - run: uv run mypy --show-traceback
 
   deploy:
     needs: lint

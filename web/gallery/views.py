@@ -2,13 +2,15 @@ import json
 from urllib.parse import quote
 
 import nh3
+from django.conf import settings
 from django.http import Http404, JsonResponse, StreamingHttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from . import nextcloud
-from .models import Comment, Flag, Gallery, Photo
+from . import nextcloud, object_storage
+from .models import Comment, Flag, Gallery, Photo, ZipDownload
+from .tasks import build_zip
 
 
 @ensure_csrf_cookie
@@ -113,3 +115,93 @@ def download_photo(request, token, photo_id):
     encoded_filename = quote(photo.filename, safe='')
     response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
     return response
+
+
+@require_http_methods(['POST'])
+def start_zip_download(request, token):
+    """POST /g/{token}/download/start - Kick off a background zip build."""
+    gallery = get_object_or_404(Gallery, token=token, is_active=True)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    photo_ids = data.get('photo_ids')  # None means all
+
+    photos = gallery.photos.all() if photo_ids is None else gallery.photos.filter(id__in=photo_ids)
+
+    if not photos.exists():
+        return JsonResponse({'error': 'No photos found'}, status=400)
+
+    photo_id_list = list(photos.values_list('id', flat=True))
+
+    # Reuse any in-flight download for this gallery — one build at a time
+    # caps disk usage and avoids redundant work if the client retries.
+    existing = ZipDownload.objects.filter(
+        gallery=gallery, status__in=['pending', 'processing'],
+    ).first()
+    if existing is not None:
+        return JsonResponse({'download_id': str(existing.id)})
+
+    dl = ZipDownload.objects.create(
+        gallery=gallery,
+        progress_total=len(photo_id_list),
+    )
+
+    build_zip.delay(str(dl.id), photo_id_list)
+
+    return JsonResponse({'download_id': str(dl.id)})
+
+
+@require_http_methods(['GET'])
+def zip_download_progress(request, token, download_id):
+    """GET /g/{token}/download/{download_id}/progress - Poll zip build progress."""
+    dl = get_object_or_404(ZipDownload, id=download_id, gallery__token=token, gallery__is_active=True)
+    return JsonResponse({
+        'status': dl.status,
+        'progress_current': dl.progress_current,
+        'progress_total': dl.progress_total,
+        'file_size': dl.file_size,
+    })
+
+
+@require_http_methods(['POST'])
+def cancel_zip_download(request, token, download_id):
+    """POST /g/{token}/download/{download_id}/cancel - Cancel a zip build."""
+    dl = get_object_or_404(
+        ZipDownload, id=download_id, gallery__token=token, gallery__is_active=True,
+    )
+    if dl.status in ('pending', 'processing'):
+        if dl.celery_task_id:
+            from config.celery import app
+            app.control.revoke(dl.celery_task_id, terminate=True)
+        dl.status = 'failed'
+        dl.error_message = 'Cancelled by user'
+        dl.save(update_fields=['status', 'error_message'])
+    return JsonResponse({'status': dl.status})
+
+
+@require_http_methods(['GET'])
+def serve_zip_download(request, token, download_id):
+    """GET /g/{token}/download/{download_id}/file - Redirect to presigned R2 URL."""
+    dl = get_object_or_404(
+        ZipDownload, id=download_id, gallery__token=token, gallery__is_active=True, status='completed',
+    )
+
+    if not dl.r2_key:
+        return JsonResponse({'error': 'File expired'}, status=410)
+
+    encoded_slug = quote(dl.gallery.slug, safe='')
+    filename = f"{encoded_slug}_photos.zip"
+    url = object_storage.get_storage_client().generate_presigned_url(
+        'get_object',
+        Params={
+            'Bucket': settings.OBJECT_STORAGE_BUCKET_NAME,
+            'Key': dl.r2_key,
+            'ResponseContentDisposition': f"attachment; filename*=UTF-8''{filename}",
+            'ResponseContentType': 'application/zip',
+        },
+        ExpiresIn=3600,
+    )
+    return redirect(url)
