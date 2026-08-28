@@ -1,0 +1,15 @@
+[Unit]
+Description=Cosplay photography toolkit - web (gunicorn)
+
+[Service]
+WorkingDirectory=%h/opt/cosplay-photography-toolkit/web
+# --no-control-socket: 25.1.0 ctl thread deadlocks forked workers (benoitc/gunicorn#3509)
+# --bind 0.0.0.0: required by Uberspace netns; loopback 502s (u8manual.uberspace.de/web_backends/)
+ExecStart=/usr/bin/uv run --group web gunicorn --no-control-socket --bind 0.0.0.0:8080 config.wsgi:application
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONFAULTHANDLER=1
+
+[Install]
+WantedBy=default.target

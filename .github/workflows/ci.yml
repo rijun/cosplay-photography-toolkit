@@ -38,4 +38,16 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -t ed25519 "$SSH_HOST" >> ~/.ssh/known_hosts
-          ssh "${SSH_USER}@${SSH_HOST}" 'cd ~/opt/cosplay-photography-toolkit && git pull && uv sync --group web && uv run python web/manage.py migrate && uv run python web/manage.py collectstatic --noinput && systemctl restart --user cosplay-photography-toolkit-web'
+          ssh "${SSH_USER}@${SSH_HOST}" '
+            set -e
+            cd ~/opt/cosplay-photography-toolkit
+            git pull
+            uv sync --group web
+            uv run python web/manage.py migrate
+            uv run python web/manage.py collectstatic --noinput
+            mkdir -p ~/.config/systemd/user
+            install -m 644 -t ~/.config/systemd/user deploy/systemd/*.service
+            systemctl --user daemon-reload
+            systemctl --user enable cosplay-photography-toolkit-web celery
+            systemctl --user restart cosplay-photography-toolkit-web celery
+          '
