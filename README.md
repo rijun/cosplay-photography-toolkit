@@ -107,19 +107,28 @@ python manage.py createsuperuser
 
 ## Deployment
 
-The web app runs behind a reverse proxy with gunicorn:
+Runs on Uberspace 8 as systemd user services (gunicorn on :8080, celery worker,
+redis). Pushing to `main` deploys via `.github/workflows/ci.yml`.
+
+Service definitions are version-controlled in `deploy/systemd/` and installed by
+the deploy step. Don't edit units on the server.
 
 ```bash
-# Install dependencies
 uv sync --group web
-
-# Run migrations and collect static files
-python manage.py migrate
-python manage.py collectstatic
-
-# Start with gunicorn
-gunicorn --bind 0.0.0.0:8000 config.wsgi:application
+uv run python web/manage.py migrate
+uv run python web/manage.py collectstatic --noinput
+systemctl --user restart cosplay-photography-toolkit-web celery
 ```
+
+Two flags that must stay:
+
+- `--bind 0.0.0.0`: Uberspace gives each account its own network namespace and
+  proxies in over a veth interface, so binding loopback returns 502
+  ([docs](https://u8manual.uberspace.de/web_backends/)).
+- `--no-control-socket`: gunicorn 25.1.0's control socket deadlocks forked
+  workers ([#3509](https://github.com/benoitc/gunicorn/issues/3509)).
+
+Logs: `journalctl --user -u cosplay-photography-toolkit-web`
 
 ## License
 
