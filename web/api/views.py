@@ -31,6 +31,7 @@ def galleries_view(request):
         gallery = Gallery(
             name=serializer.validated_data['name'],
             slug=serializer.validated_data['slug'],
+            cosplayer=serializer.validated_data.get('cosplayer', ''),
             token=secrets.token_urlsafe(24),
         )
 

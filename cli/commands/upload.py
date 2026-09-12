@@ -277,7 +277,9 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
             slug = slug[:80].rstrip("-")
         cos_display = cosplayer.lstrip("@")
         name = f"{convention} \u2013 {day_full} \u2013 {cos_display}"
-        galleries[(day_full, day_abbrev, cosplayer)] = {"slug": slug, "name": name}
+        galleries[(day_full, day_abbrev, cosplayer)] = {
+            "slug": slug, "name": name, "cosplayer": cos_display,
+        }
 
     # Build Nextcloud path per file (based on ALL cosplayers tagged on that file + its day)
     file_nextcloud_path: dict[Path, str] = {}
@@ -372,7 +374,7 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     click.echo("Creating galleries...")
     with get_client() as client:
         for _key, info in galleries.items():
-            result = client.create_gallery(info["name"], info["slug"])
+            result = client.create_gallery(info["name"], info["slug"], info.get("cosplayer", ""))
             if result.get("existed"):
                 click.echo(f"  Gallery '{info['slug']}' already exists, will add photos to it.")
             else:
@@ -487,7 +489,7 @@ def _upload_shooting(path: Path, files: list[Path], meta_by_file: dict,
     # Create gallery
     click.echo("Creating gallery...")
     with get_client() as client:
-        result = client.create_gallery(gallery_name, gallery_slug)
+        result = client.create_gallery(gallery_name, gallery_slug, character)
         if result.get("existed"):
             click.echo(f"  Gallery '{gallery_slug}' already exists, will add photos to it.")
         else:

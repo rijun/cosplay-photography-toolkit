@@ -7,6 +7,7 @@ from gallery import object_storage
 
 class Gallery(models.Model):
     name = models.CharField(max_length=200)
+    cosplayer = models.CharField(max_length=80, blank=True, default="")
     slug = models.TextField(unique=True)
     token = models.TextField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -17,8 +18,12 @@ class Gallery(models.Model):
 
 
 class Photo(models.Model):
+    # Legacy per-gallery FK — superseded by `galleries`; dropped in migration 0018.
     gallery = models.ForeignKey(
-        Gallery, on_delete=models.CASCADE, related_name="photos"
+        Gallery, on_delete=models.CASCADE, related_name="legacy_photos"
+    )
+    galleries: models.ManyToManyField[Gallery, GalleryMembership] = models.ManyToManyField(
+        Gallery, through="GalleryMembership", related_name="photos"
     )
     filename = models.TextField()
     nextcloud_path = models.TextField()
@@ -42,6 +47,25 @@ class Photo(models.Model):
             models.UniqueConstraint(
                 fields=["gallery", "filename", "is_edited"],
                 name="unique_photo_per_gallery",
+            ),
+        ]
+
+
+class GalleryMembership(models.Model):
+    gallery = models.ForeignKey(
+        Gallery, on_delete=models.CASCADE, related_name="memberships"
+    )
+    photo = models.ForeignKey(
+        Photo, on_delete=models.CASCADE, related_name="memberships"
+    )
+    display_order = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "gallery_memberships"
+        ordering = ["display_order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["gallery", "photo"], name="unique_gallery_photo"
             ),
         ]
 
@@ -71,6 +95,10 @@ class Flag(models.Model):
 class Comment(models.Model):
     photo = models.ForeignKey(
         Photo, on_delete=models.CASCADE, related_name="comments"
+    )
+    # Which cosplayer's gallery the comment was posted from. Non-null from 0018.
+    gallery = models.ForeignKey(
+        Gallery, on_delete=models.CASCADE, related_name="comments", null=True
     )
     body = models.TextField(max_length=2000)
     created_at = models.DateTimeField(auto_now_add=True)
