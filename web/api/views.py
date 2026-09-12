@@ -63,14 +63,25 @@ def galleries_view(request):
                     GalleryMembership.objects.filter(gallery=gallery).values_list('photo_id', flat=True)
                 )
                 gallery.delete()
-                Photo.objects.filter(id__in=photo_ids, galleries__isnull=True).delete()
+                orphans = Photo.objects.filter(id__in=photo_ids, galleries__isnull=True)
+                # Report only the keys of photos no sibling gallery still uses. A group
+                # photo shared with another gallery is not an orphan, so its objects stay.
+                deleted_object_keys = [
+                    key
+                    for keys in orphans.values_list('thumbnail_key', 'preview_key')
+                    for key in keys
+                    if key
+                ]
+                orphans.delete()
         except Exception:
             return Response(
                 {'detail': 'Gallery with this slug could not be deleted'},
                 status=status.HTTP_409_CONFLICT,
             )
 
-        return Response(GalleryOutSerializer(gallery).data, status=status.HTTP_200_OK)
+        data = GalleryOutSerializer(gallery).data
+        data['deleted_object_keys'] = deleted_object_keys
+        return Response(data, status=status.HTTP_200_OK)
 
     # GET
     galleries = Gallery.objects.order_by('-created_at')
