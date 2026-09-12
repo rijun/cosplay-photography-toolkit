@@ -47,7 +47,7 @@ def build_zip(self, zip_download_id, photo_ids):
     dl.celery_task_id = self.request.id
     dl.save(update_fields=['status', 'celery_task_id'])
 
-    photos = list(Photo.objects.filter(id__in=photo_ids, gallery=dl.gallery))
+    photos = list(Photo.objects.filter(id__in=photo_ids, galleries=dl.gallery))
     dl.progress_total = len(photos)
     dl.save(update_fields=['progress_total'])
 

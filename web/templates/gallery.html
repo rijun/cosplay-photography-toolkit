@@ -207,6 +207,7 @@
                             <template x-for="comment in (lightboxPhoto?.comments || [])" :key="comment.id">
                                 <div class="comment">
                                     <p x-text="comment.body"></p>
+                                    <span class="comment-author" x-show="comment.author" x-text="'— ' + comment.author"></span>
                                 </div>
                             </template>
                             <form @submit.prevent="addComment()" class="comment-form">

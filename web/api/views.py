@@ -1,11 +1,11 @@
 import secrets
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 
-from gallery.models import Gallery, Photo
+from gallery.models import Gallery, GalleryMembership, Photo
 
 from .authentication import ApiKeyAuthentication, RequireApiKey
 from .serializers import (
@@ -58,7 +58,12 @@ def galleries_view(request):
         gallery = Gallery.objects.get(slug=gallery_slug)
 
         try:
-            gallery.delete()
+            with transaction.atomic():
+                photo_ids = list(
+                    GalleryMembership.objects.filter(gallery=gallery).values_list('photo_id', flat=True)
+                )
+                gallery.delete()
+                Photo.objects.filter(id__in=photo_ids, galleries__isnull=True).delete()
         except Exception:
             return Response(
                 {'detail': 'Gallery with this slug could not be deleted'},
@@ -85,7 +90,14 @@ def register_photo(request, slug):
         return Response({'detail': 'Gallery not found'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'DELETE':
-        count, _ = gallery.photos.all().delete()
+        with transaction.atomic():
+            photo_ids = list(
+                GalleryMembership.objects.filter(gallery=gallery).values_list('photo_id', flat=True)
+            )
+            count, _ = GalleryMembership.objects.filter(gallery=gallery).delete()
+            # Drop physical photos that no longer belong to any gallery; a photo
+            # still shared with a sibling gallery keeps its flags and comments.
+            Photo.objects.filter(id__in=photo_ids, galleries__isnull=True).delete()
         return Response({'deleted': count})
 
     serializer = PhotoRegisterSerializer(data=request.data)
@@ -124,10 +136,12 @@ def get_selections(request, slug):
     if color not in range(6):
         return Response({'detail': 'Flag must be 0-5'}, status=status.HTTP_400_BAD_REQUEST)
 
-    filenames = Photo.objects.filter(
-        gallery__slug=slug,
-        flags__color=color,
-    ).order_by('display_order').values_list('filename', flat=True)
+    filenames = (
+        GalleryMembership.objects
+        .filter(gallery__slug=slug, photo__flags__color=color)
+        .order_by('display_order')
+        .values_list('photo__filename', flat=True)
+    )
 
     return Response(list(filenames))
 
