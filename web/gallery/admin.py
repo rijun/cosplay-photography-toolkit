@@ -43,7 +43,8 @@ class GalleryAdmin(admin.ModelAdmin):
             .order_by('color', 'photo__filename')
         )
         if not flags:
-            return format_html('<em>No selections yet</em>')
+            # Django 6 removed format_html()'s no-argument form.
+            return format_html('<em>{}</em>', 'No selections yet')
 
         color_names = dict(FLAG_COLORS)
         grouped: dict[int, list[str]] = {flag.color: [] for flag in flags}
