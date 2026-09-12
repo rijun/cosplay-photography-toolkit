@@ -107,7 +107,7 @@ def get_comments(request, token, photo_id):
         {
             'id': c.id,
             'body': c.body,
-            'author': (c.gallery.cosplayer or c.gallery.name) if c.gallery else '',
+            'author': c.gallery.cosplayer or c.gallery.name,
             'created_at': c.created_at.isoformat(),
         }
         for c in photo.comments.select_related('gallery').order_by('created_at')

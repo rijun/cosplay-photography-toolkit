@@ -34,5 +34,5 @@ class PhotoOutSerializer(serializers.ModelSerializer):
         model = Photo
         fields = [
             'id', 'filename', 'nextcloud_path', 'thumbnail_key', 'preview_key',
-            'display_order', 'is_edited', 'uploaded_at',
+            'is_edited', 'uploaded_at',
         ]

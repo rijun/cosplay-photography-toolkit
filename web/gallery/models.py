@@ -18,10 +18,6 @@ class Gallery(models.Model):
 
 
 class Photo(models.Model):
-    # Legacy per-gallery FK — superseded by `galleries`; dropped in migration 0018.
-    gallery = models.ForeignKey(
-        Gallery, on_delete=models.CASCADE, related_name="legacy_photos"
-    )
     galleries: models.ManyToManyField[Gallery, GalleryMembership] = models.ManyToManyField(
         Gallery, through="GalleryMembership", related_name="photos"
     )
@@ -29,7 +25,6 @@ class Photo(models.Model):
     nextcloud_path = models.TextField()
     thumbnail_key = models.TextField()
     preview_key = models.TextField()
-    display_order = models.IntegerField(default=0)
     is_edited = models.BooleanField(default=False)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -45,8 +40,8 @@ class Photo(models.Model):
         db_table = "photos"
         constraints = [
             models.UniqueConstraint(
-                fields=["gallery", "filename", "is_edited"],
-                name="unique_photo_per_gallery",
+                fields=["thumbnail_key", "preview_key"],
+                name="unique_physical_photo",
             ),
         ]
 
@@ -96,9 +91,9 @@ class Comment(models.Model):
     photo = models.ForeignKey(
         Photo, on_delete=models.CASCADE, related_name="comments"
     )
-    # Which cosplayer's gallery the comment was posted from. Non-null from 0018.
+    # Which cosplayer's gallery the comment was posted from.
     gallery = models.ForeignKey(
-        Gallery, on_delete=models.CASCADE, related_name="comments", null=True
+        Gallery, on_delete=models.CASCADE, related_name="comments"
     )
     body = models.TextField(max_length=2000)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -355,6 +355,9 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     file_r2_keys: dict[Path, tuple[str, str]] = {}
     for file in all_unique_files:
         _, day_abbrev_val, _ = file_day[file]
+        # The prefix MUST NOT include the cosplayer. Group photos are deduplicated
+        # server-side by (thumbnail_key, preview_key); adding the cosplayer here
+        # would give each gallery different keys and silently un-share flags.
         r2_prefix = f"{conv_slug}-{day_abbrev_val.lower()}"
         file_r2_keys[file] = build_r2_keys(r2_prefix, file)
         plan_data["file_r2_keys"][file.name] = list(file_r2_keys[file])

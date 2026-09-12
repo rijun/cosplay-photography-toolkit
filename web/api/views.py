@@ -103,17 +103,24 @@ def register_photo(request, slug):
     serializer = PhotoRegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    photo, created = Photo.objects.update_or_create(
-        gallery=gallery,
-        filename=serializer.validated_data['filename'],
-        is_edited=serializer.validated_data.get('is_edited', False),
-        defaults={
-            'nextcloud_path': serializer.validated_data['nextcloud_path'],
-            'thumbnail_key': serializer.validated_data['thumbnail_key'],
-            'preview_key': serializer.validated_data['preview_key'],
-            'display_order': serializer.validated_data['display_order'],
-        },
-    )
+    # Physical-photo identity is the R2 key pair: a group photo registered from
+    # each cosplayer's gallery resolves to one Photo with several memberships.
+    # update_or_create (not get_or_create) keeps refreshing nextcloud_path.
+    with transaction.atomic():
+        photo, _ = Photo.objects.update_or_create(
+            thumbnail_key=serializer.validated_data['thumbnail_key'],
+            preview_key=serializer.validated_data['preview_key'],
+            defaults={
+                'filename': serializer.validated_data['filename'],
+                'nextcloud_path': serializer.validated_data['nextcloud_path'],
+                'is_edited': serializer.validated_data.get('is_edited', False),
+            },
+        )
+        _, created = GalleryMembership.objects.update_or_create(
+            gallery=gallery,
+            photo=photo,
+            defaults={'display_order': serializer.validated_data['display_order']},
+        )
 
     resp_status = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     return Response(PhotoOutSerializer(photo).data, status=resp_status)

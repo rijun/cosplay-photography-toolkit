@@ -76,6 +76,8 @@ def build_convention_path(convention_name: str, year: int, day: str, cosplayers:
     """Build Nextcloud path for a convention photo.
 
     Returns e.g. "Conventions/2026/AnimeCon/Saturday/cosplayer_1 & cosplayer_2"
+
+    All tagged cosplayers share one folder, so a group photo exists once on disk.
     """
     config = get_config()
     base_path = pathlib.Path(config["nextcloud_base_path"])
