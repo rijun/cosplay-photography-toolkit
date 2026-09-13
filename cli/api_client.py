@@ -22,8 +22,11 @@ class ApiClient:
     def __exit__(self, *args):
         self.close()
 
-    def create_gallery(self, name: str, slug: str) -> dict[str, Any]:
-        resp = self._client.post("/api/galleries", json={"name": name, "slug": slug})
+    def create_gallery(self, name: str, slug: str, cosplayer: str = "") -> dict[str, Any]:
+        resp = self._client.post(
+            "/api/galleries",
+            json={"name": name, "slug": slug, "cosplayer": cosplayer},
+        )
         if resp.status_code == 409:
             # Gallery already exists, that's fine
             return {"name": name, "slug": slug, "existed": True}

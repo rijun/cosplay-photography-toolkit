@@ -30,14 +30,20 @@ def upload_file_buffer(buffer: io.BytesIO, object_key: str) -> None:
     )
 
 
-def delete_gallery(prefix: str) -> None:
+def delete_objects(keys: list[str]) -> None:
+    """Delete specific objects.
+
+    Never delete by prefix: the convention prefix is per convention-day and shared
+    by every cosplayer, so a prefix delete would wipe a whole day's variants for
+    everyone. Pass only the keys the server reported as orphaned.
+    """
+    if not keys:
+        return
     config = get_config()
     client = _get_storage_client()
-    objects = client.list_objects_v2(Bucket=config["object_storage_bucket_name"], Prefix=prefix)
-    if 'Contents' not in objects:
-        return
-    for obj in objects['Contents']:
-        client.delete_object(Bucket=config["object_storage_bucket_name"], Key=obj['Key'])
+    bucket = config["object_storage_bucket_name"]
+    for key in keys:
+        client.delete_object(Bucket=bucket, Key=key)
 
 
 def build_r2_keys(prefix: str, file: Path) -> tuple[str, str]:

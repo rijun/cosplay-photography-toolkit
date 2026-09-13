@@ -18,7 +18,7 @@
                     class="flag-dot"
                     :class="{ 'active': activeFlag === f.color, 'flag-dot--final': f.color === 0 }"
                     :style="`--dot-color: ${f.hex}; --dot-glow: ${f.glow}`"
-                    :title="f.color === 0 ? 'final pick' : `${f.label} — pick your color, each person uses a different one`"
+                    :title="f.color === 0 ? 'final pick' : `${f.label} - pick your color, each person uses a different one`"
                     @click="setActiveFlag(f.color)"
                 >
                     <span class="flag-dot-inner"></span>
@@ -207,6 +207,7 @@
                             <template x-for="comment in (lightboxPhoto?.comments || [])" :key="comment.id">
                                 <div class="comment">
                                     <p x-text="comment.body"></p>
+                                    <span class="comment-author" x-show="comment.author" x-text="': ' + comment.author"></span>
                                 </div>
                             </template>
                             <form @submit.prevent="addComment()" class="comment-form">
@@ -465,7 +466,7 @@ function galleryApp() {
                     reverted.splice(revertIdx, 1);
                 }
                 this.photoFlags[photoId] = [...reverted];
-                this._showToast('Could not save — please try again');
+                this._showToast('Could not save, please try again');
             }
         },
 
@@ -486,7 +487,7 @@ function galleryApp() {
                 this.lightboxPhoto.comments.push(comment);
                 this.newComment = "";
             } catch {
-                this._showToast('Could not save comment — please try again');
+                this._showToast('Could not save comment, please try again');
             }
         },
 
@@ -512,7 +513,7 @@ function galleryApp() {
                 this._pollZipProgress(download_id);
             } catch {
                 this.downloading = false;
-                this._showToast('Download failed — please try again');
+                this._showToast('Download failed, please try again');
             }
         },
 
@@ -538,7 +539,7 @@ function galleryApp() {
                         } else if (Date.now() - stallSince > 30000) {
                             clearInterval(this._pollInterval);
                             this.downloading = false;
-                            this._showToast('Download failed — please try again');
+                            this._showToast('Download failed, please try again');
                             return;
                         }
                     }
@@ -550,7 +551,7 @@ function galleryApp() {
                     } else if (data.status === 'failed') {
                         clearInterval(this._pollInterval);
                         this.downloading = false;
-                        this._showToast('Download failed — please try again');
+                        this._showToast('Download failed, please try again');
                     }
                 } catch {
                     // Network hiccup — keep polling

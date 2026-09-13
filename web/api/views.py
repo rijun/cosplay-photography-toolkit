@@ -1,11 +1,11 @@
 import secrets
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 
-from gallery.models import Gallery, Photo
+from gallery.models import Gallery, GalleryMembership, Photo
 
 from .authentication import ApiKeyAuthentication, RequireApiKey
 from .serializers import (
@@ -31,6 +31,7 @@ def galleries_view(request):
         gallery = Gallery(
             name=serializer.validated_data['name'],
             slug=serializer.validated_data['slug'],
+            cosplayer=serializer.validated_data.get('cosplayer', ''),
             token=secrets.token_urlsafe(24),
         )
 
@@ -57,14 +58,30 @@ def galleries_view(request):
         gallery = Gallery.objects.get(slug=gallery_slug)
 
         try:
-            gallery.delete()
+            with transaction.atomic():
+                photo_ids = list(
+                    GalleryMembership.objects.filter(gallery=gallery).values_list('photo_id', flat=True)
+                )
+                gallery.delete()
+                orphans = Photo.objects.filter(id__in=photo_ids, galleries__isnull=True)
+                # Report only the keys of photos no sibling gallery still uses. A group
+                # photo shared with another gallery is not an orphan, so its objects stay.
+                deleted_object_keys = [
+                    key
+                    for keys in orphans.values_list('thumbnail_key', 'preview_key')
+                    for key in keys
+                    if key
+                ]
+                orphans.delete()
         except Exception:
             return Response(
                 {'detail': 'Gallery with this slug could not be deleted'},
                 status=status.HTTP_409_CONFLICT,
             )
 
-        return Response(GalleryOutSerializer(gallery).data, status=status.HTTP_200_OK)
+        data = GalleryOutSerializer(gallery).data
+        data['deleted_object_keys'] = deleted_object_keys
+        return Response(data, status=status.HTTP_200_OK)
 
     # GET
     galleries = Gallery.objects.order_by('-created_at')
@@ -84,23 +101,37 @@ def register_photo(request, slug):
         return Response({'detail': 'Gallery not found'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'DELETE':
-        count, _ = gallery.photos.all().delete()
+        with transaction.atomic():
+            photo_ids = list(
+                GalleryMembership.objects.filter(gallery=gallery).values_list('photo_id', flat=True)
+            )
+            count, _ = GalleryMembership.objects.filter(gallery=gallery).delete()
+            # Drop physical photos that no longer belong to any gallery; a photo
+            # still shared with a sibling gallery keeps its flags and comments.
+            Photo.objects.filter(id__in=photo_ids, galleries__isnull=True).delete()
         return Response({'deleted': count})
 
     serializer = PhotoRegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    photo, created = Photo.objects.update_or_create(
-        gallery=gallery,
-        filename=serializer.validated_data['filename'],
-        is_edited=serializer.validated_data.get('is_edited', False),
-        defaults={
-            'nextcloud_path': serializer.validated_data['nextcloud_path'],
-            'thumbnail_key': serializer.validated_data['thumbnail_key'],
-            'preview_key': serializer.validated_data['preview_key'],
-            'display_order': serializer.validated_data['display_order'],
-        },
-    )
+    # Physical-photo identity is the R2 key pair: a group photo registered from
+    # each cosplayer's gallery resolves to one Photo with several memberships.
+    # update_or_create (not get_or_create) keeps refreshing nextcloud_path.
+    with transaction.atomic():
+        photo, _ = Photo.objects.update_or_create(
+            thumbnail_key=serializer.validated_data['thumbnail_key'],
+            preview_key=serializer.validated_data['preview_key'],
+            defaults={
+                'filename': serializer.validated_data['filename'],
+                'nextcloud_path': serializer.validated_data['nextcloud_path'],
+                'is_edited': serializer.validated_data.get('is_edited', False),
+            },
+        )
+        _, created = GalleryMembership.objects.update_or_create(
+            gallery=gallery,
+            photo=photo,
+            defaults={'display_order': serializer.validated_data['display_order']},
+        )
 
     resp_status = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     return Response(PhotoOutSerializer(photo).data, status=resp_status)
@@ -123,10 +154,12 @@ def get_selections(request, slug):
     if color not in range(6):
         return Response({'detail': 'Flag must be 0-5'}, status=status.HTTP_400_BAD_REQUEST)
 
-    filenames = Photo.objects.filter(
-        gallery__slug=slug,
-        flags__color=color,
-    ).order_by('display_order').values_list('filename', flat=True)
+    filenames = (
+        GalleryMembership.objects
+        .filter(gallery__slug=slug, photo__flags__color=color)
+        .order_by('display_order')
+        .values_list('photo__filename', flat=True)
+    )
 
     return Response(list(filenames))
 

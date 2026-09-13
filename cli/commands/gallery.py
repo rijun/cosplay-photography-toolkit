@@ -5,7 +5,7 @@ import click
 
 from cli.api_client import complete_slug, get_client
 from cli.config import get_config
-from cli.object_storage import delete_gallery as delete_gallery_objects
+from cli.object_storage import delete_objects
 
 
 @click.group()
@@ -49,8 +49,11 @@ def gallery_delete(gallery_slug: str):
             click.echo(f"Gallery with slug '{gallery_slug}' does not exist.")
             return
         result = client.delete_gallery(gallery_slug)
-    delete_gallery_objects(gallery_slug)
-    click.echo(f"Gallery {result['slug']} deleted.")
+    # The server reports the keys of photos that no other gallery still holds;
+    # group photos shared with a sibling gallery keep their files.
+    keys = result.get("deleted_object_keys", [])
+    delete_objects(keys)
+    click.echo(f"Gallery {result['slug']} deleted ({len(keys)} object(s) removed from storage).")
 
 
 @gallery.command("archive")

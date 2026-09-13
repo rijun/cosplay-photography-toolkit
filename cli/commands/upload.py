@@ -277,7 +277,9 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
             slug = slug[:80].rstrip("-")
         cos_display = cosplayer.lstrip("@")
         name = f"{convention} \u2013 {day_full} \u2013 {cos_display}"
-        galleries[(day_full, day_abbrev, cosplayer)] = {"slug": slug, "name": name}
+        galleries[(day_full, day_abbrev, cosplayer)] = {
+            "slug": slug, "name": name, "cosplayer": cos_display,
+        }
 
     # Build Nextcloud path per file (based on ALL cosplayers tagged on that file + its day)
     file_nextcloud_path: dict[Path, str] = {}
@@ -353,6 +355,9 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     file_r2_keys: dict[Path, tuple[str, str]] = {}
     for file in all_unique_files:
         _, day_abbrev_val, _ = file_day[file]
+        # The prefix MUST NOT include the cosplayer. Group photos are deduplicated
+        # server-side by (thumbnail_key, preview_key); adding the cosplayer here
+        # would give each gallery different keys and silently un-share flags.
         r2_prefix = f"{conv_slug}-{day_abbrev_val.lower()}"
         file_r2_keys[file] = build_r2_keys(r2_prefix, file)
         plan_data["file_r2_keys"][file.name] = list(file_r2_keys[file])
@@ -372,7 +377,7 @@ def _upload_convention(path: Path, files: list[Path], meta_by_file: dict,
     click.echo("Creating galleries...")
     with get_client() as client:
         for _key, info in galleries.items():
-            result = client.create_gallery(info["name"], info["slug"])
+            result = client.create_gallery(info["name"], info["slug"], info.get("cosplayer", ""))
             if result.get("existed"):
                 click.echo(f"  Gallery '{info['slug']}' already exists, will add photos to it.")
             else:
@@ -487,7 +492,7 @@ def _upload_shooting(path: Path, files: list[Path], meta_by_file: dict,
     # Create gallery
     click.echo("Creating gallery...")
     with get_client() as client:
-        result = client.create_gallery(gallery_name, gallery_slug)
+        result = client.create_gallery(gallery_name, gallery_slug, character)
         if result.get("existed"):
             click.echo(f"  Gallery '{gallery_slug}' already exists, will add photos to it.")
         else:

@@ -6,12 +6,13 @@ from gallery.models import Gallery, Photo
 class GalleryCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     slug = serializers.RegexField(r'^[a-z0-9._\-]+$', max_length=80)
+    cosplayer = serializers.CharField(max_length=80, required=False, allow_blank=True, default='')
 
 
 class GalleryOutSerializer(serializers.ModelSerializer):
     class Meta:
         model = Gallery
-        fields = ['id', 'name', 'slug', 'token', 'created_at', 'is_active']
+        fields = ['id', 'name', 'slug', 'cosplayer', 'token', 'created_at', 'is_active']
 
 
 class PhotoRegisterSerializer(serializers.Serializer):
@@ -33,5 +34,5 @@ class PhotoOutSerializer(serializers.ModelSerializer):
         model = Photo
         fields = [
             'id', 'filename', 'nextcloud_path', 'thumbnail_key', 'preview_key',
-            'display_order', 'is_edited', 'uploaded_at',
+            'is_edited', 'uploaded_at',
         ]

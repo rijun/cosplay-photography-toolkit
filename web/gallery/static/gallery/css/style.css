@@ -885,6 +885,13 @@ h1::after {
     color: rgba(245, 237, 230, 0.82);
 }
 
+.comment-author {
+    display: block;
+    font-size: 0.8rem;
+    opacity: 0.65;
+    margin-top: 0.15rem;
+}
+
 .comment-form textarea {
     width: 100%;
     background: rgba(255, 252, 249, 0.05);

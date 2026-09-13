@@ -1,7 +1,14 @@
 from django.contrib import admin
 from django.utils.html import format_html, format_html_join
 
-from .models import FLAG_COLORS, Comment, Flag, Gallery, Photo
+from .models import FLAG_COLORS, Comment, Flag, Gallery, GalleryMembership, Photo
+
+
+class GalleryMembershipInline(admin.TabularInline):
+    model = GalleryMembership
+    extra = 0
+    fields = ['photo', 'display_order']
+    autocomplete_fields = ['photo']
 
 
 @admin.register(Gallery)
@@ -10,6 +17,7 @@ class GalleryAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'created_at']
     search_fields = ['name', 'slug']
     readonly_fields = ['slug', 'token', 'url', 'created_at', 'flag_list']
+    inlines = [GalleryMembershipInline]
 
     @admin.display(description='URL')
     def url(self, obj):
@@ -22,7 +30,7 @@ class GalleryAdmin(admin.ModelAdmin):
 
     @admin.display(description='Flags')
     def flag_count(self, obj):
-        return Flag.objects.filter(photo__gallery=obj).count()
+        return Flag.objects.filter(photo__galleries=obj).count()
 
     @admin.display(description='Selections')
     def flag_list(self, obj):
@@ -30,12 +38,13 @@ class GalleryAdmin(admin.ModelAdmin):
             return '-'
         flags = (
             Flag.objects
-            .filter(photo__gallery=obj)
+            .filter(photo__galleries=obj)
             .select_related('photo')
             .order_by('color', 'photo__filename')
         )
         if not flags:
-            return format_html('<em>No selections yet</em>')
+            # Django 6 removed format_html()'s no-argument form.
+            return format_html('<em>{}</em>', 'No selections yet')
 
         color_names = dict(FLAG_COLORS)
         grouped: dict[int, list[str]] = {flag.color: [] for flag in flags}
@@ -51,9 +60,13 @@ class GalleryAdmin(admin.ModelAdmin):
 
 @admin.register(Photo)
 class PhotoAdmin(admin.ModelAdmin):
-    list_display = ['filename', 'gallery', 'display_order', 'active_flags', 'comment_count']
-    list_filter = ['gallery']
+    list_display = ['filename', 'gallery_list', 'active_flags', 'comment_count']
+    list_filter = ['galleries']
     search_fields = ['filename']
+
+    @admin.display(description='Galleries')
+    def gallery_list(self, obj):
+        return ', '.join(g.slug for g in obj.galleries.all()) or '-'
 
     @admin.display(description='Flags')
     def active_flags(self, obj):
@@ -68,7 +81,7 @@ class PhotoAdmin(admin.ModelAdmin):
 @admin.register(Flag)
 class FlagAdmin(admin.ModelAdmin):
     list_display = ['photo', 'get_color_display', 'created_at']
-    list_filter = ['color', 'photo__gallery', 'created_at']
+    list_filter = ['color', 'photo__galleries', 'created_at']
     readonly_fields = ['photo', 'created_at']
 
     @admin.display(description='Color')
@@ -79,7 +92,7 @@ class FlagAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ['photo', 'body_preview', 'created_at']
-    list_filter = ['photo__gallery', 'created_at']
+    list_filter = ['photo__galleries', 'created_at']
     readonly_fields = ['photo', 'created_at']
 
     @admin.display(description='Comment')

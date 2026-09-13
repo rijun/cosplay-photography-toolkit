@@ -9,7 +9,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from . import nextcloud, object_storage
-from .models import Comment, Flag, Gallery, Photo, ZipDownload
+from .models import Comment, Flag, Gallery, GalleryMembership, Photo, ZipDownload
 from .tasks import build_zip
 
 
@@ -17,24 +17,30 @@ from .tasks import build_zip
 def view_gallery(request, token):
     """GET /g/{token} - Render gallery HTML view."""
     try:
-        gallery = Gallery.objects.prefetch_related(
-            'photos__flags',
-            'photos__comments',
-        ).get(token=token, is_active=True)
+        gallery = Gallery.objects.get(token=token, is_active=True)
     except Gallery.DoesNotExist:
         raise Http404("Gallery not found") from None
 
-    photos = sorted(gallery.photos.all(), key=lambda p: p.display_order)
+    # Query the through model directly: ordering via `photos.order_by(
+    # 'memberships__display_order')` would add a second, unscoped join and
+    # return duplicate/misordered rows for photos shared with other galleries.
+    memberships = (
+        GalleryMembership.objects
+        .filter(gallery=gallery)
+        .order_by('display_order')
+        .select_related('photo')
+        .prefetch_related('photo__flags')
+    )
 
     photo_data = []
-    for photo in photos:
-        active_flags = [f.color for f in photo.flags.all()]
+    for membership in memberships:
+        photo = membership.photo
         photo_data.append({
             'id': photo.id,
             'filename': photo.filename,
             'thumbnail_url': photo.thumbnail_url,
             'preview_url': photo.preview_url,
-            'flags': active_flags,
+            'flags': [f.color for f in photo.flags.all()],
             'is_edited': photo.is_edited,
         })
 
@@ -48,7 +54,7 @@ def view_gallery(request, token):
 def toggle_flag(request, token, photo_id):
     """POST /g/{token}/photos/{photo_id}/flag?color=1 - Toggle a flag on a photo."""
     gallery = get_object_or_404(Gallery, token=token, is_active=True)
-    photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
+    photo = get_object_or_404(Photo, id=photo_id, galleries=gallery)
 
     try:
         color = int(request.GET.get('color', 0))
@@ -71,7 +77,7 @@ def toggle_flag(request, token, photo_id):
 def add_comment(request, token, photo_id):
     """POST /g/{token}/photos/{photo_id}/comment - Add a comment."""
     gallery = get_object_or_404(Gallery, token=token, is_active=True)
-    photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
+    photo = get_object_or_404(Photo, id=photo_id, galleries=gallery)
 
     try:
         data = json.loads(request.body)
@@ -82,11 +88,12 @@ def add_comment(request, token, photo_id):
     if not body or len(body) > 2000:
         return JsonResponse({'error': 'Body must be 1-2000 characters'}, status=400)
 
-    comment = Comment.objects.create(photo=photo, body=body)
+    comment = Comment.objects.create(photo=photo, gallery=gallery, body=body)
 
     return JsonResponse({
         'id': comment.id,
         'body': comment.body,
+        'author': gallery.cosplayer or gallery.name,
         'created_at': comment.created_at.isoformat(),
     })
 
@@ -95,10 +102,15 @@ def add_comment(request, token, photo_id):
 def get_comments(request, token, photo_id):
     """GET /g/{token}/photos/{photo_id}/comments - Get comments for a photo."""
     gallery = get_object_or_404(Gallery, token=token, is_active=True)
-    photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
+    photo = get_object_or_404(Photo, id=photo_id, galleries=gallery)
     comments = [
-        {'id': c.id, 'body': c.body, 'created_at': c.created_at.isoformat()}
-        for c in photo.comments.order_by('created_at')
+        {
+            'id': c.id,
+            'body': c.body,
+            'author': c.gallery.cosplayer or c.gallery.name,
+            'created_at': c.created_at.isoformat(),
+        }
+        for c in photo.comments.select_related('gallery').order_by('created_at')
     ]
     return JsonResponse(comments, safe=False)
 
@@ -107,7 +119,7 @@ def get_comments(request, token, photo_id):
 def download_photo(request, token, photo_id):
     """GET /g/{token}/photos/{photo_id}/download - Download a single photo."""
     gallery = get_object_or_404(Gallery, token=token, is_active=True)
-    photo = get_object_or_404(Photo, id=photo_id, gallery=gallery)
+    photo = get_object_or_404(Photo, id=photo_id, galleries=gallery)
 
     stream = nextcloud.download_file_stream(photo.nextcloud_path, photo.filename)
     response = StreamingHttpResponse(stream, content_type='application/octet-stream')
