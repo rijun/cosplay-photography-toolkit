@@ -43,8 +43,8 @@ jobs:
             cd ~/opt/cosplay-photography-toolkit
             git pull
             uv sync --group web
-            uv run python web/manage.py migrate
-            uv run python web/manage.py collectstatic --noinput
+            uv run python backend/manage.py migrate
+            uv run python backend/manage.py collectstatic --noinput
             mkdir -p ~/.config/systemd/user
             install -m 644 -t ~/.config/systemd/user deploy/systemd/*.service
             systemctl --user daemon-reload

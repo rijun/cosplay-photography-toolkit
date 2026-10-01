@@ -96,7 +96,7 @@ No login required — the token provides access.
 
 ```bash
 # Run migrations
-cd web && python manage.py migrate
+cd backend && python manage.py migrate
 
 # Start dev server
 python manage.py runserver
@@ -115,9 +115,9 @@ the deploy step. Don't edit units on the server.
 
 ```bash
 uv sync --group web
-uv run python web/manage.py migrate
-uv run python web/manage.py collectstatic --noinput
-systemctl --user restart cosplay-photography-toolkit-web celery
+uv run python backend/manage.py migrate
+uv run python backend/manage.py collectstatic --noinput
+systemctl --user restart cosplay-photography-toolkit-backend celery
 ```
 
 Two flags that must stay:
