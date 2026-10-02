@@ -1,0 +1,4 @@
+/* Global entry CSS — proves Vite's CSS extraction reaches the manifest. */
+.vite-probe {
+  font-family: system-ui, sans-serif;
+}

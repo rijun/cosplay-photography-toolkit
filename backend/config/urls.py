@@ -18,11 +18,14 @@ import os
 
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import TemplateView
 
 ADMIN_PATH = os.environ.get('ADMIN_PATH', 'admin')
 
 urlpatterns = [
     path(f'{ADMIN_PATH}/', admin.site.urls),
     path('api/', include('api.urls')),
+    # Throwaway asset-pipeline probe; delete before merging.
+    path('dev/vite-probe', TemplateView.as_view(template_name='dev_probe.html')),
     path('', include('gallery.urls')),
 ]
