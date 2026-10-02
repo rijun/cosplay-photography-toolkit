@@ -1,0 +1,14 @@
+{% load django_vite %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Svelte PoC</title>
+    {% vite_hmr_client %}
+    {% vite_asset 'src/poc.ts' %}
+</head>
+<body>
+    {{ photos|json_script:"poc-photos" }}
+    <div id="svelte-root"></div>
+</body>
+</html>

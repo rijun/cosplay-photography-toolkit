@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
     manifest: 'manifest.json',
     rolldownOptions: {
       input: {
-        main: 'src/main.ts',
+        poc: 'src/poc.ts'
       },
       // Watch builds keep stable filenames for development to prevent asset caching.
       output:
