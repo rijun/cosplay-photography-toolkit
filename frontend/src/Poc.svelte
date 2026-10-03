@@ -6,6 +6,15 @@ import { Zoom } from 'swiper/modules'
 import 'swiper/css';
 import 'swiper/css/zoom';
 
+const FLAG_HEX: Record<number, string> = {
+    0: '#22a355', // final
+    1: '#d4857a', // rose
+    2: '#a888b8', // lavender
+    3: '#88a888', // sage
+    4: '#7a9ab8', // sky
+    5: '#c4a050', // amber
+}
+
 let { photos }: { photos: Photo[] } = $props()
 let openIndex = $state<number | null>(null)
 let swiperEl = $state<HTMLElement | undefined>()
@@ -122,6 +131,13 @@ $effect(() => {
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="photo-card" onclick={() => openPhoto(i)}>
             <img src={photo.thumbnail_url} alt={photo.filename} loading="lazy">
+            {#if photo.flags.length}
+                <span class="mark">
+                    {#each photo.flags as flag (flag)}
+                        <span class="dot" style="background: {FLAG_HEX[flag]}"></span>
+                    {/each}
+                </span>
+            {/if}
         </div>
     {/each}
 </div>
@@ -164,5 +180,43 @@ $effect(() => {
     .swiper {
         width: 100%;
         height: 100%;
+    }
+
+    .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+
+    /* Design: image flush to the card edge, no frame. */
+    .photo-card {
+        padding: 0;
+        border-radius: 8px;
+        box-shadow: none;
+    }
+
+    .photo-card img {
+        border-radius: 0;
+    }
+
+    /* Scrim pill: dots on a plate, so they read over any photo. */
+    .mark {
+        position: absolute;
+        left: 6px;
+        bottom: 6px;
+        display: flex;
+        gap: 5px;
+        padding: 4px 6px;
+        border-radius: 10px;
+        background: rgba(25, 19, 16, 0.35);
+        backdrop-filter: blur(12px) saturate(1.6);
+        -webkit-backdrop-filter: blur(12px) saturate(1.6);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    }
+
+    .dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
     }
 </style>
