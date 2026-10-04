@@ -57,10 +57,10 @@
         align-items: center;
         gap: 0.35rem;
         margin-bottom: 0.875rem;
+        padding-bottom: 2px; /* prevent clipping box-shadows */
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
-        padding-bottom: 2px; /* prevent clipping box-shadows */
     }
 
     .filter-bar::-webkit-scrollbar {
@@ -68,35 +68,36 @@
     }
 
     .filter-bar-label {
-        font-size: 0.62rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.15em;
-        color: var(--text-muted);
-        white-space: nowrap;
         flex-shrink: 0;
         margin-right: 0.15rem;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        color: var(--text-muted);
     }
 
+    /* --- Chips --- */
     .filter-chip {
         display: inline-flex;
+        flex-shrink: 0;
         align-items: center;
         gap: 0.35rem;
         height: 32px;
         padding: 0 0.75rem;
-        background: rgba(255, 252, 249, 0.7);
         border: 1.5px solid var(--border);
-        color: var(--text-secondary);
+        border-radius: 20px;
         font-family: inherit;
         font-size: 0.7rem;
         font-weight: 700;
         letter-spacing: 0.07em;
         text-transform: uppercase;
-        border-radius: 20px;
+        white-space: nowrap;
+        color: var(--text-secondary);
+        background: rgba(var(--cream-rgb), 0.7);
         cursor: pointer;
         transition: all 0.2s;
-        white-space: nowrap;
-        flex-shrink: 0;
     }
 
     .filter-chip:active {
@@ -104,26 +105,26 @@
     }
 
     .filter-chip.active {
-        background: rgba(255, 252, 249, 0.95);
         border-color: var(--chip-color, var(--rose));
-        color: var(--chip-color, #8a5a50);
+        color: var(--chip-color, var(--rose-deep));
+        background: rgba(var(--cream-rgb), 0.95);
         box-shadow: 0 0 0 2px var(--chip-glow, var(--rose-glow));
     }
 
     /* "all" chip has no dot color vars, use rose as default active state */
     .filter-chip:first-of-type.active {
         border-color: var(--rose-light);
-        color: #8a5a50;
+        color: var(--rose-deep);
         box-shadow: none;
     }
 
     .filter-chip-dot {
+        flex-shrink: 0;
         width: 8px;
         height: 8px;
         border-radius: 50%;
         background: var(--chip-color);
         opacity: 0.5;
-        flex-shrink: 0;
         transition: opacity 0.2s;
     }
 

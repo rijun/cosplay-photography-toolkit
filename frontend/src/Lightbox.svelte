@@ -1,9 +1,10 @@
 <script lang="ts">
     import { untrack } from 'svelte'
     import Swiper from 'swiper'
-    import { Zoom } from 'swiper/modules'
+    import { Zoom, Navigation } from 'swiper/modules'
     import 'swiper/css'
     import 'swiper/css/zoom'
+    import 'swiper/css/navigation'
     import Details from './Details.svelte'
     import { gallery } from './lib/state.svelte'
 
@@ -30,7 +31,7 @@
     $effect(() => {
         if (!swiperEl) return
         swiper = new Swiper(swiperEl, {
-            modules: [Zoom],
+            modules: [Zoom, Navigation],
             // untrack: reading lightboxIndex here would rebuild Swiper on every swipe.
             initialSlide: untrack(() => gallery.lightboxIndex) ?? 0,
             // Loads the active slide plus 2 either side, not all of them.
@@ -42,6 +43,10 @@
             on: {
                 // Keeps the filename, flags and comments on the photo being viewed.
                 slideChange: (instance) => (gallery.lightboxIndex = instance.activeIndex),
+            },
+            navigation: {
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev',
             },
         })
         // Stops the grid scrolling behind the lightbox.
@@ -144,9 +149,9 @@
 
     <div class="lightbox-content">
         <button class="lightbox-close" onclick={() => gallery.closeLightbox()}>&times;</button>
-        <button class="lightbox-prev" onclick={() => swiper?.slidePrev()}>&lsaquo;</button>
 
         <div class="swiper" bind:this={swiperEl}>
+            <div class="swiper-button-prev"></div>
             <div class="swiper-wrapper">
                 {#each gallery.visible as photo (photo.id)}
                     <div class="swiper-slide">
@@ -156,21 +161,14 @@
                     </div>
                 {/each}
             </div>
+            <div class="swiper-button-next"></div>
         </div>
-
-        <button class="lightbox-next" onclick={() => swiper?.slideNext()}>&rsaquo;</button>
 
         <div class="lightbox-bottom">
             <p class="lightbox-filename-mobile">{gallery.lightboxPhoto?.filename ?? ''}</p>
-            <div class="lightbox-bottom-actions">
-                <button class="lightbox-nav-btn" onclick={() => swiper?.slidePrev()}>&lsaquo;</button>
-                <button
-                    class="lightbox-details-btn"
-                    class:active={showDetails}
-                    onclick={() => (showDetails = !showDetails)}>&#9776;</button
-                >
-                <button class="lightbox-nav-btn" onclick={() => swiper?.slideNext()}>&rsaquo;</button>
-            </div>
+            <button class="lightbox-details-btn" class:active={showDetails} onclick={() => (showDetails = !showDetails)}
+                >&#9776;</button
+            >
         </div>
 
         <div class="lightbox-sidebar" class:is-open={showDetails}>
@@ -181,14 +179,21 @@
 </div>
 
 <style>
+    /* --- Shell --- */
     .lightbox {
         position: fixed;
         inset: 0;
         z-index: 200;
         display: flex;
         flex-direction: column;
+    }
+
+    /* Holds the background so the dismiss gesture fades opacity instead of repainting. */
+    .lightbox-fade {
+        position: absolute;
+        inset: 0;
         background: #120e0c;
-    } /* only used on desktop */
+    }
 
     .lightbox-content {
         position: relative;
@@ -200,129 +205,114 @@
         user-select: none;
     }
 
-    /* Close */
+    /* --- Close --- */
     .lightbox-close {
         position: absolute;
         top: calc(0.75rem + var(--safe-top));
         right: 0.75rem;
+        z-index: 10;
         width: 44px;
         height: 44px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.1);
         border: none;
-        color: #fff;
+        border-radius: 50%;
+        font-family: inherit;
         font-size: 1.4rem;
         line-height: 44px;
         text-align: center;
+        color: #fff;
+        background: rgba(255, 255, 255, 0.1);
         cursor: pointer;
-        z-index: 10;
-        transition: background 0.2s;
-        font-family: inherit;
+        transition:
+            background 0.2s,
+            transform 0.2s;
     }
 
     .lightbox-close:active {
         background: rgba(255, 255, 255, 0.2);
     }
 
-    /* Desktop nav — hidden on mobile */
-    .lightbox-prev,
-    .lightbox-next {
-        display: none;
+    /* --- Swiper --- */
+    .swiper {
+        flex: 1;
+        /* Swiper's auto side margins block the column stretch on mobile. */
+        width: 100%;
+        min-width: 0;
+        height: 100%;
     }
 
-    /* --- Mobile bottom bar --- */
+    .swiper-button-prev,
+    .swiper-button-next {
+        color: rgba(var(--cream-rgb), 0.75);
+    }
+
+    /* --- Bottom bar (mobile) --- */
     .lightbox-bottom {
-        flex-shrink: 0;
         display: flex;
+        flex-shrink: 0;
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
+        min-height: 64px;
         padding: 0.5rem 1rem calc(0.65rem + var(--safe-bottom));
         background: rgba(22, 17, 15, 0.96);
-        min-height: 64px;
     }
 
     .lightbox-filename-mobile {
-        font-size: 0.7rem;
-        color: rgba(245, 237, 230, 0.5);
         flex: 1;
         min-width: 0;
         overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 0.7rem;
         white-space: nowrap;
-    }
-
-    .lightbox-bottom-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        flex-shrink: 0;
-    }
-
-    .lightbox-nav-btn {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.07);
-        border: none;
-        color: rgba(255, 255, 255, 0.75);
-        font-size: 1.4rem;
-        line-height: 44px;
-        text-align: center;
-        cursor: pointer;
-        transition: background 0.15s;
-        font-family: inherit;
-    }
-
-    .lightbox-nav-btn:active {
-        background: rgba(255, 255, 255, 0.17);
+        text-overflow: ellipsis;
+        color: rgba(var(--linen-rgb), 0.5);
     }
 
     .lightbox-details-btn {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.07);
-        border: none;
-        color: rgba(255, 255, 255, 0.75);
-        font-size: 1rem;
-        cursor: pointer;
         display: flex;
+        flex-shrink: 0;
         align-items: center;
         justify-content: center;
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 50%;
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.75);
+        background: rgba(255, 255, 255, 0.07);
+        cursor: pointer;
         transition:
             background 0.15s,
             color 0.15s;
     }
 
     .lightbox-details-btn.active {
-        background: rgba(212, 133, 122, 0.25);
         color: var(--rose-light);
+        background: rgba(var(--rose-rgb), 0.25);
     }
 
     .lightbox-details-btn:active {
         background: rgba(255, 255, 255, 0.17);
     }
 
-    /* --- Sidebar — bottom sheet on mobile --- */
+    /* --- Sidebar (bottom sheet on mobile) --- */
     .lightbox-sidebar {
         position: fixed;
-        left: 0;
         right: 0;
         bottom: 0;
+        left: 0;
+        z-index: 300;
         height: 72vh;
-        background: linear-gradient(180deg, #242018 0%, #1e1a14 100%);
-        border-top: 1px solid rgba(186, 143, 133, 0.12);
-        border-radius: 16px 16px 0 0;
         padding: 0.5rem 1.25rem calc(1.75rem + var(--safe-bottom));
         overflow-y: auto;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
-        color: #e8ddd8;
-        z-index: 300;
+        border-top: 1px solid rgba(var(--dust-rgb), 0.12);
+        border-radius: 16px 16px 0 0;
+        color: var(--text-on-dark);
+        background: linear-gradient(180deg, #242018 0%, #1e1a14 100%);
+        box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.5);
         transform: translateY(100%);
         transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
-        box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.5);
     }
 
     .lightbox-sidebar.is-open {
@@ -332,28 +322,31 @@
     .lightbox-sidebar-handle {
         width: 36px;
         height: 4px;
-        border-radius: 2px;
-        background: rgba(186, 143, 133, 0.25);
         margin: 0 auto 1rem;
+        border-radius: 2px;
+        background: rgba(var(--dust-rgb), 0.25);
     }
 
+    /* --- Desktop: centered modal, image + sidebar --- */
     @media (min-width: 768px) {
-        /* Lightbox — centered modal, image + sidebar */
         .lightbox {
             flex-direction: row;
             align-items: center;
             justify-content: center;
+        }
+
+        .lightbox-fade {
             background: rgba(30, 24, 22, 0.93);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
 
         .lightbox-content {
             flex-direction: row;
-            width: auto;
-            height: auto;
-            max-width: 95vw;
-            max-height: 95vh;
-            gap: 1.25rem;
             align-items: center;
+            gap: 1.25rem;
+            width: 95vw;
+            height: 90vh;
             overflow: visible;
         }
 
@@ -363,101 +356,35 @@
             width: 2.25rem;
             height: 2.25rem;
             line-height: 2.25rem;
-            font-size: 1.4rem;
-            background: rgba(212, 165, 154, 0.3);
+            background: rgba(var(--rose-soft-rgb), 0.3);
         }
 
         .lightbox-close:hover {
-            background: rgba(212, 165, 154, 0.5);
+            background: rgba(var(--rose-soft-rgb), 0.5);
             transform: rotate(90deg);
         }
 
-        .lightbox-prev,
-        .lightbox-next {
-            display: block;
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 2.75rem;
-            height: 2.75rem;
-            border-radius: 50%;
-            background: rgba(212, 165, 154, 0.25);
-            border: none;
-            color: #fff;
-            font-size: 1.75rem;
-            line-height: 2.75rem;
-            text-align: center;
-            cursor: pointer;
-            z-index: 10;
-            transition:
-                background 0.2s,
-                transform 0.2s;
-            font-family: inherit;
-        }
-
-        .lightbox-prev {
-            left: -3.5rem;
-        }
-        .lightbox-next {
-            right: -3.5rem;
-        }
-
-        .lightbox-prev:hover {
-            background: rgba(212, 165, 154, 0.45);
-            transform: translateY(-50%) scale(1.05);
-        }
-        .lightbox-next:hover {
-            background: rgba(212, 165, 154, 0.45);
-            transform: translateY(-50%) scale(1.05);
-        }
-
-        /* Mobile bottom bar hidden on desktop */
         .lightbox-bottom {
             display: none;
         }
 
-        /* Sidebar — warm paper panel */
         .lightbox-sidebar {
             position: static;
             width: 280px;
             height: auto;
             max-height: 90vh;
-            transform: none !important;
-            transition: none;
-            background: linear-gradient(180deg, #faf6f2 0%, #f5ede6 100%);
-            border: 1px solid var(--border);
-            border-top: 1px solid var(--border);
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            color: var(--text-primary);
             padding: 1.25rem;
-            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            background: linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            transform: none;
+            transition: none;
         }
 
         .lightbox-sidebar-handle {
             display: none;
         }
-    }
-
-    /* Carries the background so the dismiss gesture animates opacity, which is
-       compositor-only, instead of repainting .lightbox. Also takes over the blur
-       the old .lightbox-backdrop provided on desktop. */
-    .lightbox-fade {
-        position: absolute;
-        inset: 0;
-        background: #120e0c;
-    }
-
-    @media (min-width: 768px) {
-        .lightbox-fade {
-            background: rgba(30, 24, 22, 0.93);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-        }
-    }
-
-    .swiper {
-        width: 100%;
-        height: 100%;
     }
 </style>

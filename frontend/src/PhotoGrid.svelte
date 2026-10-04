@@ -59,14 +59,15 @@
         gap: 0.5rem;
     }
 
+    /* --- Card --- */
     .photo-card {
         position: relative;
-        border-radius: 4px;
+        padding: 0.3rem 0.3rem 0.2rem;
         overflow: hidden;
-        background: #fffcf9;
+        border-radius: 4px;
+        background: var(--cream);
         box-shadow: var(--shadow-soft);
         transition: box-shadow 0.25s ease;
-        padding: 0.3rem 0.3rem 0.2rem;
     }
 
     .photo-card--select-mode {
@@ -76,11 +77,7 @@
     .photo-card--selected {
         box-shadow:
             0 0 0 2.5px var(--rose),
-            0 4px 16px rgba(212, 165, 154, 0.3);
-    }
-
-    .photo-card--selected img {
-        opacity: 0.82;
+            0 4px 16px rgba(var(--rose-soft-rgb), 0.3);
     }
 
     /* A button so the photo is reachable by keyboard; styled away to nothing. */
@@ -93,23 +90,54 @@
     }
 
     .photo-card img {
+        display: block;
         width: 100%;
         aspect-ratio: 1 / 1;
-        object-fit: cover;
-        cursor: pointer;
-        display: block;
         border-radius: 2px;
+        object-fit: cover;
         filter: saturate(0.95) contrast(0.98);
+        cursor: pointer;
         transition: filter 0.25s;
     }
 
+    .photo-card--selected img {
+        opacity: 0.82;
+    }
+
+    /* --- Select mode checkmark --- */
+    .card-select-overlay {
+        position: absolute;
+        inset: 0.3rem;
+        z-index: 6;
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-end;
+        padding: 0.3rem;
+        border-radius: 2px;
+    }
+
+    .card-checkmark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--rose);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+
+    /* --- Flag dots --- */
     .card-flags {
         position: absolute;
         top: 0.5rem;
         left: 0.5rem;
+        z-index: 5;
         display: flex;
         gap: 3px;
-        z-index: 5;
     }
 
     .card-flag-dot {
@@ -123,62 +151,36 @@
             0 0 0 1.5px rgba(255, 255, 255, 0.6);
     }
 
-    /* Select mode checkmark */
-    .card-select-overlay {
-        position: absolute;
-        inset: 0.3rem;
-        border-radius: 2px;
-        display: flex;
-        align-items: flex-start;
-        justify-content: flex-end;
-        padding: 0.3rem;
-        z-index: 6;
-    }
-
-    .card-checkmark {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: var(--rose);
-        color: #fff;
-        font-size: 0.85rem;
-        font-weight: 700;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-    }
-
-    /* Card flag-toggle button */
+    /* --- Flag toggle --- */
     .photo-actions {
         position: absolute;
-        bottom: 0.3rem;
         right: 0.3rem;
+        bottom: 0.3rem;
         left: 0.3rem;
-        padding: 1.25rem 0.3rem 0.2rem;
         display: flex;
         justify-content: flex-end;
-        background: linear-gradient(to top, rgba(255, 252, 249, 0.9), transparent);
+        padding: 1.25rem 0.3rem 0.2rem;
         border-radius: 0 0 2px 2px;
+        background: linear-gradient(to top, rgba(var(--cream-rgb), 0.9), transparent);
     }
 
     .btn-select {
-        background: rgba(255, 252, 249, 0.88);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        border: 1.5px solid rgba(186, 143, 133, 0.3);
-        color: #9a8580;
-        font-size: 1rem;
         min-width: 44px;
         min-height: 36px;
         padding: 0.3rem 0.65rem;
+        border: 1.5px solid rgba(var(--dust-rgb), 0.3);
         border-radius: 20px;
+        font-family: inherit;
+        font-size: 1rem;
+        color: #9a8580;
+        background: rgba(var(--cream-rgb), 0.88);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
         cursor: pointer;
         transition:
             color 0.2s,
             border-color 0.2s,
             background 0.2s;
-        font-family: inherit;
     }
 
     .btn-select:active {
@@ -186,12 +188,12 @@
     }
 
     .btn-select.active {
-        color: var(--active-flag-color, #c47a70);
         border-color: var(--active-flag-color, var(--rose-light));
+        color: var(--active-flag-color, #c47a70);
         background: rgba(248, 232, 228, 0.95);
     }
 
-    /* TABLET — wider grid */
+    /* --- Tablet: wider grid --- */
     @media (min-width: 540px) {
         .photo-grid {
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -199,9 +201,8 @@
         }
     }
 
-    /* DESKTOP — full experience */
+    /* --- Desktop: polaroid hover --- */
     @media (min-width: 768px) {
-        /* Cards — polaroid hover */
         .photo-card {
             padding: 0.5rem 0.5rem 0.4rem;
             transition:
@@ -210,8 +211,8 @@
         }
 
         .photo-card:hover {
-            transform: translateY(-4px) rotate(0.4deg);
             box-shadow: var(--shadow-lift);
+            transform: translateY(-4px) rotate(0.4deg);
         }
 
         .photo-card:hover img {

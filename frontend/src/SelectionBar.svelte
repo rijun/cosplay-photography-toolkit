@@ -21,19 +21,19 @@
         position: fixed;
         bottom: calc(1.25rem + var(--safe-bottom));
         left: 50%;
+        z-index: 100;
         transform: translateX(-50%);
         display: flex;
         align-items: center;
         gap: 0.75rem;
         padding: 0.6rem 1.1rem;
+        border-radius: 32px;
+        white-space: nowrap;
+        color: var(--linen);
         background: rgba(50, 42, 38, 0.93);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border-radius: 32px;
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
-        z-index: 100;
-        color: #f5ede6;
-        white-space: nowrap;
     }
 
     .selection-count {
@@ -52,21 +52,21 @@
         align-items: center;
         height: 32px;
         padding: 0 0.9rem;
-        background: rgba(255, 252, 249, 0.12);
-        border: 1px solid rgba(255, 252, 249, 0.2);
-        color: #f5ede6;
+        border: 1px solid rgba(var(--cream-rgb), 0.2);
+        border-radius: 20px;
         font-family: inherit;
         font-size: 0.7rem;
         font-weight: 700;
         letter-spacing: 0.09em;
         text-transform: uppercase;
-        border-radius: 20px;
+        text-decoration: none;
+        color: var(--linen);
+        background: rgba(var(--cream-rgb), 0.12);
         cursor: pointer;
         transition: background 0.2s;
-        text-decoration: none;
     }
 
     .btn-selection:active {
-        background: rgba(255, 252, 249, 0.24);
+        background: rgba(var(--cream-rgb), 0.24);
     }
 </style>

@@ -29,18 +29,18 @@
         display: flex;
         align-items: center;
         gap: 0.4rem;
+        width: 100%;
         margin-bottom: 1rem;
         padding: 0.4rem 0.75rem;
-        background: rgba(255, 252, 249, 0.75);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border: 1px solid var(--border);
-        border-radius: 32px;
-        width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
-        box-shadow: 0 2px 12px rgba(107, 87, 80, 0.06);
+        border: 1px solid var(--border);
+        border-radius: 32px;
+        background: rgba(var(--cream-rgb), 0.75);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        box-shadow: 0 2px 12px rgba(var(--umber-rgb), 0.06);
     }
 
     .flag-picker::-webkit-scrollbar {
@@ -48,73 +48,43 @@
     }
 
     .flag-picker-label {
+        flex-shrink: 0;
         font-size: 0.62rem;
         font-weight: 700;
-        text-transform: uppercase;
         letter-spacing: 0.15em;
-        color: var(--text-muted);
+        text-transform: uppercase;
         white-space: nowrap;
-        flex-shrink: 0;
+        color: var(--text-muted);
     }
 
-    .flag-picker-hint {
-        display: none;
-    }
-
+    /* --- Dots --- */
     .flag-picker-dots {
         display: flex;
-        gap: 0.1rem;
         flex: 1;
         justify-content: space-evenly;
+        gap: 0.1rem;
     }
 
     .flag-dot {
         display: flex;
         flex-direction: column;
+        flex-shrink: 0;
         align-items: center;
+        justify-content: center;
         gap: 0.15rem;
-        background: none;
-        border: none;
-        cursor: pointer;
         /* 44px minimum touch target */
         min-width: 44px;
         min-height: 44px;
         padding: 0.3rem 0.4rem;
+        border: none;
         border-radius: 12px;
-        justify-content: center;
+        background: none;
+        cursor: pointer;
         transition: background 0.2s;
-        flex-shrink: 0;
     }
 
     .flag-dot:active {
-        background: rgba(186, 143, 133, 0.12);
-    }
-
-    .flag-dot-inner {
-        display: block;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--dot-color);
-        opacity: 0.4;
-        transition:
-            opacity 0.2s,
-            transform 0.2s,
-            box-shadow 0.2s;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    }
-
-    .flag-dot.active .flag-dot-inner {
-        opacity: 1;
-        transform: scale(1.2);
-        box-shadow:
-            0 0 0 3px var(--dot-glow),
-            0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Labels hidden on mobile, shown on desktop */
-    .flag-dot-label {
-        display: none;
+        background: rgba(var(--dust-rgb), 0.12);
     }
 
     .flag-dot--final {
@@ -123,30 +93,58 @@
         border-left: 1.5px solid var(--border);
     }
 
+    .flag-dot-inner {
+        display: block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--dot-color);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        opacity: 0.4;
+        transition:
+            opacity 0.2s,
+            transform 0.2s,
+            box-shadow 0.2s;
+    }
+
+    .flag-dot.active .flag-dot-inner {
+        box-shadow:
+            0 0 0 3px var(--dot-glow),
+            0 2px 8px rgba(0, 0, 0, 0.1);
+        opacity: 1;
+        transform: scale(1.2);
+    }
+
+    /* Labels and hint are desktop-only. */
+    .flag-dot-label,
+    .flag-picker-hint {
+        display: none;
+    }
+
+    /* --- Desktop: natural width, labels, hint --- */
     @media (min-width: 768px) {
-        /*natural width, labels, hint */
         .flag-picker {
             width: fit-content;
-            overflow: visible;
             padding: 0.65rem 1rem;
+            overflow: visible;
         }
 
-        .flag-picker-hint {
-            display: block;
-            font-size: 0.65rem;
-            color: #c0b0a8;
-            white-space: nowrap;
-            padding-left: 0.5rem;
-            border-left: 1px solid var(--border);
-            font-style: italic;
+        .flag-dot--final {
+            margin-left: 0.35rem;
+            padding-left: 0.6rem;
+        }
+
+        .flag-dot:not(.active):hover .flag-dot-inner {
+            opacity: 0.7;
+            transform: scale(1.1);
         }
 
         .flag-dot-label {
             display: block;
             font-size: 0.55rem;
             font-weight: 600;
-            text-transform: uppercase;
             letter-spacing: 0.08em;
+            text-transform: uppercase;
             color: var(--text-muted);
             transition: color 0.2s;
         }
@@ -155,14 +153,14 @@
             color: var(--dot-color);
         }
 
-        .flag-dot:hover .flag-dot-inner {
-            opacity: 0.7;
-            transform: scale(1.1);
-        }
-
-        .flag-dot--final {
-            margin-left: 0.35rem;
-            padding-left: 0.6rem;
+        .flag-picker-hint {
+            display: block;
+            padding-left: 0.5rem;
+            border-left: 1px solid var(--border);
+            font-size: 0.65rem;
+            font-style: italic;
+            white-space: nowrap;
+            color: #c0b0a8;
         }
     }
 </style>

@@ -35,19 +35,23 @@
         position: fixed;
         bottom: calc(1.25rem + var(--safe-bottom, 0px));
         left: 50%;
+        z-index: 400;
         transform: translateX(-50%);
+        min-width: 220px;
         padding: 0.75rem 1.25rem;
-        background: rgba(74, 50, 46, 0.95);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: #f5ede6;
+        border-radius: 16px;
         font-size: 0.8rem;
         font-weight: 600;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-        z-index: 400;
-        min-width: 220px;
         text-align: center;
+        color: var(--linen);
+        background: rgba(var(--cocoa-rgb), 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .download-toast--above-selection {
+        bottom: calc(4.5rem + var(--safe-bottom, 0px));
     }
 
     .download-toast-header {
@@ -57,48 +61,44 @@
         gap: 0.75rem;
     }
 
+    .download-toast-spinner {
+        display: inline-block;
+        flex-shrink: 0;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        border-top-color: var(--linen);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
     .download-toast-cancel {
-        background: none;
+        padding: 0;
         border: none;
-        color: #f5ede6;
         font-size: 1.1rem;
         line-height: 1;
-        cursor: pointer;
+        color: var(--linen);
+        background: none;
         opacity: 0.6;
-        padding: 0;
+        cursor: pointer;
     }
 
     .download-toast-cancel:hover {
         opacity: 1;
     }
 
-    .download-toast--above-selection {
-        bottom: calc(4.5rem + var(--safe-bottom, 0px));
-    }
-
-    .download-toast-spinner {
-        display: inline-block;
-        width: 14px;
-        height: 14px;
-        border: 2px solid rgba(255, 255, 255, 0.25);
-        border-top-color: #f5ede6;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        flex-shrink: 0;
-    }
-
     .download-toast-bar {
-        margin-top: 0.5rem;
         height: 4px;
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 2px;
+        margin-top: 0.5rem;
         overflow: hidden;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.15);
     }
 
     .download-toast-fill {
         height: 100%;
-        background: #d4857a;
         border-radius: 2px;
+        background: var(--rose);
         transition: width 0.3s ease;
     }
 </style>

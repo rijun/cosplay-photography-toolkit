@@ -93,15 +93,17 @@
 {/if}
 
 <style>
+    /* --- Filename --- */
     .photo-filename {
-        font-size: 0.74rem;
-        color: rgba(186, 143, 133, 0.65);
         margin-bottom: 1rem;
-        word-break: break-all;
         padding-bottom: 0.75rem;
-        border-bottom: 1px dashed rgba(186, 143, 133, 0.18);
+        border-bottom: 1px dashed rgba(var(--dust-rgb), 0.18);
+        font-size: 0.74rem;
+        word-break: break-all;
+        color: rgba(var(--dust-rgb), 0.65);
     }
 
+    /* --- Flags --- */
     .lightbox-flags {
         display: flex;
         flex-direction: column;
@@ -116,12 +118,12 @@
         width: 100%;
         min-height: 44px;
         padding: 0.5rem 0.85rem;
-        background: rgba(255, 252, 249, 0.04);
-        border: 1.5px solid rgba(186, 143, 133, 0.1);
+        border: 1.5px solid rgba(var(--dust-rgb), 0.1);
         border-radius: 10px;
+        font-family: inherit;
+        background: rgba(var(--cream-rgb), 0.04);
         cursor: pointer;
         transition: all 0.18s ease;
-        font-family: inherit;
     }
 
     .lightbox-flag-btn:active {
@@ -129,12 +131,27 @@
     }
 
     .lightbox-flag-btn.active {
-        background: rgba(248, 238, 232, 0.08);
         border-color: var(--flag-color);
+        background: rgba(var(--blush-rgb), 0.08);
         box-shadow: 0 0 0 1.5px var(--flag-glow);
     }
 
+    .lightbox-flag-btn--final {
+        position: relative;
+        margin-top: 0.5rem;
+    }
+
+    .lightbox-flag-btn--final::before {
+        content: '';
+        position: absolute;
+        top: -0.35rem;
+        right: 0;
+        left: 0;
+        border-top: 1px dashed rgba(var(--dust-rgb), 0.18);
+    }
+
     .lightbox-flag-dot {
+        flex-shrink: 0;
         width: 14px;
         height: 14px;
         border-radius: 50%;
@@ -143,7 +160,6 @@
         transition:
             opacity 0.2s,
             transform 0.2s;
-        flex-shrink: 0;
     }
 
     .lightbox-flag-btn.active .lightbox-flag-dot {
@@ -154,9 +170,9 @@
     .lightbox-flag-label {
         font-size: 0.78rem;
         font-weight: 600;
-        text-transform: uppercase;
         letter-spacing: 0.1em;
-        color: rgba(186, 143, 133, 0.6);
+        text-transform: uppercase;
+        color: rgba(var(--dust-rgb), 0.6);
         transition: color 0.2s;
     }
 
@@ -164,102 +180,88 @@
         color: var(--flag-color);
     }
 
-    .lightbox-flag-btn--final {
-        margin-top: 0.5rem;
-        position: relative;
-    }
-
-    .lightbox-flag-btn--final::before {
-        content: '';
-        position: absolute;
-        top: -0.35rem;
-        left: 0;
-        right: 0;
-        border-top: 1px dashed rgba(186, 143, 133, 0.18);
-    }
-
-    /* Comments */
+    /* --- Comments --- */
     .comments-section {
         margin-top: 1.25rem;
     }
 
-    .comments-loading {
-        font-size: 0.75rem;
-        color: rgba(186, 143, 133, 0.45);
-        font-style: italic;
-        padding: 0.5rem 0;
-    }
-
     .comments-section h3 {
+        margin-bottom: 0.75rem;
         font-size: 0.72rem;
         font-weight: 700;
-        margin-bottom: 0.75rem;
-        color: rgba(186, 143, 133, 0.55);
         letter-spacing: 0.12em;
         text-transform: uppercase;
+        color: rgba(var(--dust-rgb), 0.55);
+    }
+
+    .comments-loading {
+        padding: 0.5rem 0;
+        font-size: 0.75rem;
+        font-style: italic;
+        color: rgba(var(--dust-rgb), 0.45);
     }
 
     .comment {
-        background: rgba(255, 252, 249, 0.05);
-        padding: 0.65rem 0.85rem;
-        border-radius: 6px;
         margin-bottom: 0.4rem;
+        padding: 0.65rem 0.85rem;
+        border-left: 2.5px solid rgba(var(--rose-soft-rgb), 0.35);
+        border-radius: 6px;
         font-size: 0.83rem;
-        border-left: 2.5px solid rgba(212, 165, 154, 0.35);
         line-height: 1.55;
-        color: rgba(245, 237, 230, 0.82);
+        color: rgba(var(--linen-rgb), 0.82);
+        background: rgba(var(--cream-rgb), 0.05);
     }
 
     .comment-author {
         display: block;
+        margin-top: 0.15rem;
         font-size: 0.8rem;
         opacity: 0.65;
-        margin-top: 0.15rem;
     }
 
     .comment-form textarea {
         width: 100%;
-        background: rgba(255, 252, 249, 0.05);
-        border: 1.5px solid rgba(186, 143, 133, 0.18);
-        color: #e8ddd8;
-        border-radius: 8px;
         padding: 0.65rem;
-        resize: vertical;
+        border: 1.5px solid rgba(var(--dust-rgb), 0.18);
+        border-radius: 8px;
         font-family: inherit;
         font-size: 0.85rem;
+        line-height: 1.5;
+        color: var(--text-on-dark);
+        background: rgba(var(--cream-rgb), 0.05);
+        resize: vertical;
         transition:
             border-color 0.2s,
             box-shadow 0.2s;
-        line-height: 1.5;
     }
 
     .comment-form textarea::placeholder {
-        color: rgba(186, 143, 133, 0.35);
+        color: rgba(var(--dust-rgb), 0.35);
     }
 
     .comment-form textarea:focus {
-        outline: none;
         border-color: var(--rose);
-        box-shadow: 0 0 0 3px rgba(212, 165, 154, 0.1);
+        box-shadow: 0 0 0 3px rgba(var(--rose-soft-rgb), 0.1);
+        outline: none;
     }
 
     .comment-form button {
-        margin-top: 0.6rem;
         height: 44px;
+        margin-top: 0.6rem;
         padding: 0 1.5rem;
-        background: linear-gradient(135deg, var(--rose) 0%, #c49088 100%);
         border: none;
-        color: #fff;
         border-radius: 24px;
-        cursor: pointer;
-        font-family: 'Quicksand', sans-serif;
-        font-weight: 700;
+        font-family: inherit;
         font-size: 0.83rem;
+        font-weight: 700;
         letter-spacing: 0.05em;
+        color: #fff;
+        background: linear-gradient(135deg, var(--rose) 0%, #c49088 100%);
+        box-shadow: 0 2px 8px rgba(196, 144, 136, 0.3);
+        cursor: pointer;
         transition:
             transform 0.2s,
             box-shadow 0.2s;
-        box-shadow: 0 2px 8px rgba(196, 144, 136, 0.3);
     }
 
     .comment-form button:active {
@@ -267,67 +269,64 @@
     }
 
     .comment-form button:disabled {
+        box-shadow: none;
         opacity: 0.35;
         cursor: default;
         transform: none;
-        box-shadow: none;
     }
 
+    /* --- Desktop: light theme --- */
     @media (min-width: 768px) {
         .photo-filename {
             color: var(--text-muted);
         }
 
-        /* Flag buttons — light theme on desktop */
         .lightbox-flag-btn {
-            background: rgba(255, 252, 249, 0.6);
-            border-color: rgba(186, 143, 133, 0.15);
+            border-color: rgba(var(--dust-rgb), 0.15);
+            background: rgba(var(--cream-rgb), 0.6);
         }
 
         .lightbox-flag-btn:hover {
-            background: rgba(248, 238, 232, 0.8);
             border-color: var(--flag-color);
+            background: rgba(var(--blush-rgb), 0.8);
             transform: none;
         }
 
         .lightbox-flag-btn.active {
-            background: rgba(248, 238, 232, 0.95);
-            border-color: var(--flag-color);
+            background: rgba(var(--blush-rgb), 0.95);
             box-shadow: 0 0 0 2px var(--flag-glow);
         }
 
-        .lightbox-flag-dot {
-            opacity: 0.4;
+        .lightbox-flag-btn--final::before {
+            border-top-color: rgba(var(--dust-rgb), 0.3);
         }
-        .lightbox-flag-btn:hover .lightbox-flag-dot {
+
+        .lightbox-flag-btn:not(.active):hover .lightbox-flag-dot {
             opacity: 0.7;
         }
+
         .lightbox-flag-label {
             color: #a09890;
         }
 
-        .lightbox-flag-btn--final::before {
-            border-top-color: rgba(186, 143, 133, 0.3);
+        .comments-section h3 {
+            color: var(--text-secondary);
         }
 
-        /* Comments — light theme on desktop */
-        .comments-section h3 {
-            color: #8a7a75;
-        }
         .comments-loading {
             color: #b8a8a0;
         }
 
         .comment {
-            background: rgba(255, 252, 249, 0.8);
             border-left-color: #d4b8b0;
             color: var(--text-primary);
+            background: rgba(var(--cream-rgb), 0.8);
         }
 
         .comment-form textarea {
-            background: #fffcf9;
-            border-color: rgba(186, 143, 133, 0.25);
+            border-color: rgba(var(--dust-rgb), 0.25);
             color: var(--text-primary);
+            background: var(--cream);
         }
 
         .comment-form textarea::placeholder {
