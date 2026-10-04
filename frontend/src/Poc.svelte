@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { Photo } from "./photo";
+import type { Photo } from "./lib/photo";
 import { untrack } from 'svelte'
 import Swiper from 'swiper';
 import { Zoom } from 'swiper/modules'

@@ -50,6 +50,47 @@ def view_gallery(request, token):
     })
 
 
+@ensure_csrf_cookie
+def view_gallery_v2(request, token):
+    """GET /g_v2/{token} - Svelte gallery, built alongside the Alpine one.
+
+    Temporary. Replaces `view_gallery` once the port is complete; until then both
+    render the same photo data so they can be compared side by side.
+    """
+    try:
+        gallery = Gallery.objects.get(token=token, is_active=True)
+    except Gallery.DoesNotExist:
+        raise Http404("Gallery not found") from None
+
+    # Query the through model directly: ordering via `photos.order_by(
+    # 'memberships__display_order')` would add a second, unscoped join and
+    # return duplicate/misordered rows for photos shared with other galleries.
+    memberships = (
+        GalleryMembership.objects
+        .filter(gallery=gallery)
+        .order_by('display_order')
+        .select_related('photo')
+        .prefetch_related('photo__flags')
+    )
+
+    photo_data = []
+    for membership in memberships:
+        photo = membership.photo
+        photo_data.append({
+            'id': photo.id,
+            'filename': photo.filename,
+            'thumbnail_url': photo.thumbnail_url,
+            'preview_url': photo.preview_url,
+            'flags': [f.color for f in photo.flags.all()],
+            'is_edited': photo.is_edited,
+        })
+
+    return render(request, 'gallery_v2.html', {
+        'gallery': gallery,
+        'photos': photo_data
+    })
+
+
 @require_http_methods(['POST'])
 def toggle_flag(request, token, photo_id):
     """POST /g/{token}/photos/{photo_id}/flag?color=1 - Toggle a flag on a photo."""

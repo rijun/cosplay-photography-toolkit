@@ -14,7 +14,8 @@ export default defineConfig(({ mode }) => ({
     manifest: 'manifest.json',
     rolldownOptions: {
       input: {
-        poc: 'src/poc.ts'
+        poc: 'src/poc.ts',
+        gallery: 'src/gallery.ts',
       },
       // Watch builds keep stable filenames for development to prevent asset caching.
       output:

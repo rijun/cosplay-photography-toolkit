@@ -3,7 +3,7 @@ import 'vite/modulepreload-polyfill'
 
 import {mount} from 'svelte'
 import Poc from './Poc.svelte'
-import type {Photo} from "./photo"
+import type {Photo} from "./lib/photo"
 import '../../backend/gallery/static/gallery/css/style.css'
 
 // Entry runs on every page that loads the bundle; mount only where the host element exists.

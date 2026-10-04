@@ -4,6 +4,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 from gallery.models import Gallery, GalleryMembership
 
+
 @ensure_csrf_cookie
 def poc_gallery(request, token):
     """GET /g/{token} - Render gallery HTML view."""

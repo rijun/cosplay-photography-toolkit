@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% load django_vite %}
+
+{% block title %}{{ gallery.name }}{% endblock %}
+
+{% block head %}
+{% vite_hmr_client %}
+{% vite_asset 'src/gallery.ts' %}
+{% endblock %}
+
+{% block content %}
+<div class="gallery-container">
+    <h1>{{ gallery.name }}</h1>
+    <p class="gallery-tagline">~ select your favorites ~</p>
+
+    {{ photos|json_script:"photos" }}
+    <div id="svelte-root" data-token="{{ gallery.token }}"></div>
+</div>
+{% endblock %}
+
+{# Below: the Alpine gallery, kept as a porting reference. Django discards
+   content outside a block, so none of it renders. Delete together with
+   gallery.html once the port is done. #}
+
+    <!-- Flag Picker -->
+    <div class="flag-picker">
+        <span class="flag-picker-label">your color</span>
+        <div class="flag-picker-dots">
+            <template x-for="f in flagDefs" :key="f.color">
+                <button
+                    class="flag-dot"
+                    :class="{ 'active': activeFlag === f.color, 'flag-dot--final': f.color === 0 }"
+                    :style="`--dot-color: ${f.hex}; --dot-glow: ${f.glow}`"
+                    :title="f.color === 0 ? 'final pick' : `${f.label} - pick your color, each person uses a different one`"
+                    @click="setActiveFlag(f.color)"
+                >
+                    <span class="flag-dot-inner"></span>
+                    <span class="flag-dot-label" x-text="f.label"></span>
+                </button>
+            </template>
+        </div>
+        <span class="flag-picker-hint">select a color to mark your favorites</span>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="gallery-toolbar">
+        <button @click="toggleSelectMode()" :class="{ 'active': selectMode }" class="btn-toolbar">
+            <span x-text="selectMode ? 'Cancel' : 'Select'"></span>
+        </button>
+        <button @click="downloadPhotos()" :disabled="downloading" class="btn-toolbar">
+            Download All
+        </button>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+        <span class="filter-bar-label">show</span>
+        <button
+            class="filter-chip"
+            :class="{ 'active': filterFlags.length === 0 }"
+            @click="filterFlags = []"
+        >all</button>
+        <template x-for="f in flagDefs" :key="f.color">
+            <button
+                class="filter-chip"
+                :class="{ 'active': filterFlags.includes(f.color) }"
+                :style="`--chip-color: ${f.hex}; --chip-glow: ${f.glow}`"
+                @click="toggleFilter(f.color)"
+            >
+                <span class="filter-chip-dot"></span>
+                <span x-text="f.label"></span>
+            </button>
+        </template>
+    </div>
+
+    <!-- Edited filter -->
+    <template x-if="hasEdited">
+        <div class="filter-bar edited-filter-bar">
+            <span class="filter-bar-label">type</span>
+            <button class="filter-chip" :class="{ 'active': editedFilter === 'all' }" @click="editedFilter = 'all'">all</button>
+            <button class="filter-chip" :class="{ 'active': editedFilter === 'originals' }" @click="editedFilter = 'originals'">originals</button>
+            <button class="filter-chip" :class="{ 'active': editedFilter === 'edited' }" @click="editedFilter = 'edited'">edited</button>
+        </div>
+    </template>
+
+    <div class="photo-grid">
+        {% for photo in photos %}
+        <div class="photo-card"
+             x-data="{ photoId: {{ photo.id }}, photoIndex: {{ forloop.counter0 }} }"
+             :class="{ 'photo-card--selected': isSelected(photoId), 'photo-card--select-mode': selectMode }"
+             x-show="(filterFlags.length === 0 || filterFlags.some(f => photoFlags[photoId]?.includes(f))) && (editedFilter === 'all' || (editedFilter === 'edited' && photoEdited[photoId]) || (editedFilter === 'originals' && !photoEdited[photoId]))"
+             data-photo-id="{{ photo.id }}"
+             data-preview-url="{{ photo.preview_url }}"
+             data-filename="{{ photo.filename }}"
+             data-flags="{{ photo.flags }}"
+             data-is-edited="{{ photo.is_edited|yesno:'true,false' }}"
+             @click="selectMode ? toggleSelect(photoId) : openLightbox(photoIndex)">
+            <img
+                src="{{ photo.thumbnail_url }}"
+                alt="{{ photo.filename }}"
+                loading="lazy"
+            >
+            <!-- Select mode checkmark -->
+            <div class="card-select-overlay" x-show="selectMode" style="pointer-events: none">
+                <span class="card-checkmark" x-show="isSelected(photoId)">&#10003;</span>
+            </div>
+            <!-- Flag dots on card -->
+            <div class="card-flags">
+                <template x-for="f in flagDefs" :key="f.color">
+                    <span
+                        class="card-flag-dot"
+                        :style="`--dot-color: ${f.hex}`"
+                        x-show="photoFlags[photoId]?.includes(f.color)"
+                        x-transition.opacity
+                    ></span>
+                </template>
+            </div>
+            <div class="photo-actions">
+                <button
+                    @click.stop="toggleFlag(photoId)"
+                    :class="{ 'active': photoFlags[photoId]?.includes(activeFlag) }"
+                    :style="activeFlagStyle"
+                    class="btn-select"
+                >
+                    <span x-text="photoFlags[photoId]?.includes(activeFlag) ? '&#9829;' : '&#9825;'">&#9825;</span>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Toast notification -->
+    <div x-show="toast" x-cloak x-transition.opacity class="toast" x-text="toast"></div>
+
+    <!-- Download progress toast -->
+    <div x-show="downloading" x-cloak x-transition.opacity
+         class="download-toast"
+         :class="{ 'download-toast--above-selection': selectedPhotos.length > 0 }">
+        <template x-if="zipProgress < zipTotal || zipTotal === 0">
+            <div>
+                <div class="download-toast-header">
+                    <span x-text="`Preparing: ${zipProgress} / ${zipTotal} photos`"></span>
+                    <button @click="cancelDownload()" class="download-toast-cancel">&times;</button>
+                </div>
+                <div class="download-toast-bar">
+                    <div class="download-toast-fill" :style="`width: ${zipTotal ? (zipProgress / zipTotal * 100) : 0}%`"></div>
+                </div>
+            </div>
+        </template>
+        <template x-if="zipProgress >= zipTotal && zipTotal > 0">
+            <div class="download-toast-header">
+                <span class="download-toast-spinner"></span>
+                <span>Finalizing download...</span>
+                <button @click="cancelDownload()" class="download-toast-cancel">&times;</button>
+            </div>
+        </template>
+    </div>
+
+    <!-- Selection action bar -->
+    <div x-show="selectedPhotos.length > 0" x-cloak x-transition class="selection-bar">
+        <span class="selection-count" x-text="`${selectedPhotos.length} selected`"></span>
+        <div class="selection-actions">
+            <button @click="downloadPhotos(selectedPhotos)" :disabled="downloading" class="btn-selection">
+                Download
+            </button>
+            <button @click="selectedPhotos = []" class="btn-selection">Clear</button>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div x-show="lightboxOpen" x-cloak class="lightbox" @keydown.left.window="prevPhoto()" @keydown.right.window="nextPhoto()">
+        <div class="lightbox-backdrop" @click="closeLightbox()"></div>
+        <div class="lightbox-content"
+             @touchstart.passive="touchStartX = $event.touches[0].clientX"
+             @touchend.passive="onSwipe($event)">
+            <button class="lightbox-close" @click="closeLightbox()">&times;</button>
+            <button class="lightbox-prev" @click="prevPhoto()">&lsaquo;</button>
+            <img :src="lightboxPhoto?.preview_url" :alt="lightboxPhoto?.filename"
+                 class="lightbox-image"
+                 @click="showDetails = false">
+            <button class="lightbox-next" @click="nextPhoto()">&rsaquo;</button>
+
+            <!-- Mobile bottom bar -->
+            <div class="lightbox-bottom">
+                <p x-text="lightboxPhoto?.filename" class="lightbox-filename-mobile"></p>
+                <div class="lightbox-bottom-actions">
+                    <button @click="prevPhoto()" class="lightbox-nav-btn">&lsaquo;</button>
+                    <button @click="showDetails = !showDetails"
+                            :class="{ 'active': showDetails }"
+                            class="lightbox-details-btn">&#9776;</button>
+                    <button @click="nextPhoto()" class="lightbox-nav-btn">&rsaquo;</button>
+                </div>
+            </div>
+
+            <!-- Sidebar — bottom sheet on mobile, panel on desktop -->
+            <div class="lightbox-sidebar" :class="{ 'is-open': showDetails }">
+                <div class="lightbox-sidebar-handle"></div>
+                <p x-text="lightboxPhoto?.filename" class="photo-filename"></p>
+
+                <!-- Flag toggles -->
+                <div class="lightbox-flags">
+                    <template x-for="f in flagDefs" :key="f.color">
+                        <button
+                            class="lightbox-flag-btn"
+                            :class="{ 'active': lightboxPhoto && photoFlags[lightboxPhoto.id]?.includes(f.color), 'lightbox-flag-btn--final': f.color === 0 }"
+                            :style="`--flag-color: ${f.hex}; --flag-glow: ${f.glow}`"
+                            @click="toggleFlag(lightboxPhoto?.id, f.color)"
+                        >
+                            <span class="lightbox-flag-dot"></span>
+                            <span class="lightbox-flag-label" x-text="f.label"></span>
+                        </button>
+                    </template>
+                </div>
+
+                <div class="comments-section">
+                    <h3>Comments</h3>
+                    <div x-show="commentsLoading" class="comments-loading">loading...</div>
+                    <template x-if="!commentsLoading">
+                        <div>
+                            <template x-for="comment in (lightboxPhoto?.comments || [])" :key="comment.id">
+                                <div class="comment">
+                                    <p x-text="comment.body"></p>
+                                    <span class="comment-author" x-show="comment.author" x-text="': ' + comment.author"></span>
+                                </div>
+                            </template>
+                            <form @submit.prevent="addComment()" class="comment-form">
+                                <textarea x-model="newComment" placeholder="Leave a comment..." rows="2"></textarea>
+                                <button type="submit" :disabled="!newComment.trim()">Send</button>
+                            </form>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
