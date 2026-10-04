@@ -128,7 +128,7 @@ Two flags that must stay:
 - `--no-control-socket`: gunicorn 25.1.0's control socket deadlocks forked
   workers ([#3509](https://github.com/benoitc/gunicorn/issues/3509)).
 
-Logs: `journalctl --user -u cosplay-photography-toolkit-web`
+Logs: `journalctl --user -u cosplay-photography-toolkit-backend`
 
 ## License
 
