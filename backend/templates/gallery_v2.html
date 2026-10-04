@@ -36,35 +36,6 @@
     </div>
 
     <!-- Filter bar -->
-    <div class="filter-bar">
-        <span class="filter-bar-label">show</span>
-        <button
-            class="filter-chip"
-            :class="{ 'active': filterFlags.length === 0 }"
-            @click="filterFlags = []"
-        >all</button>
-        <template x-for="f in flagDefs" :key="f.color">
-            <button
-                class="filter-chip"
-                :class="{ 'active': filterFlags.includes(f.color) }"
-                :style="`--chip-color: ${f.hex}; --chip-glow: ${f.glow}`"
-                @click="toggleFilter(f.color)"
-            >
-                <span class="filter-chip-dot"></span>
-                <span x-text="f.label"></span>
-            </button>
-        </template>
-    </div>
-
-    <!-- Edited filter -->
-    <template x-if="hasEdited">
-        <div class="filter-bar edited-filter-bar">
-            <span class="filter-bar-label">type</span>
-            <button class="filter-chip" :class="{ 'active': editedFilter === 'all' }" @click="editedFilter = 'all'">all</button>
-            <button class="filter-chip" :class="{ 'active': editedFilter === 'originals' }" @click="editedFilter = 'originals'">originals</button>
-            <button class="filter-chip" :class="{ 'active': editedFilter === 'edited' }" @click="editedFilter = 'edited'">edited</button>
-        </div>
-    </template>
 
     <!-- Grid -->
 
