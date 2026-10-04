@@ -4,6 +4,8 @@ export type EditedFilter = 'all' | 'originals' | 'edited'
 
 const DEFAULT_FLAG = 1
 
+const TOAST_MS = 3000
+
 const flagKey = (token: string) => `gallery-flag-${token}`
 
 function readStoredFlag(token: string): number {
@@ -33,6 +35,9 @@ class GalleryState {
 
     // Private so every writing goes through the setter and gets persisted.
     #activeFlag = $state(DEFAULT_FLAG)
+
+    // A timer handle, not state: nothing renders from it.
+    #toastTimer: ReturnType<typeof setTimeout> | undefined
 
     photos = $state<Photo[]>([])
 
@@ -76,6 +81,13 @@ class GalleryState {
 
     isSelected(id: number): boolean {
         return this.selected.includes(id)
+    }
+
+    /** Transient message, auto-dismissed. Replaces any message still showing. */
+    showToast(message: string) {
+        this.toast = message
+        clearTimeout(this.#toastTimer)
+        this.#toastTimer = setTimeout(() => (this.toast = null), TOAST_MS)
     }
 
     /** Throws rather than silently using an empty token in API URLs. */

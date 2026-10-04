@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_v2.html" %}
 
 {% load django_vite %}
 
@@ -24,24 +24,6 @@
    gallery.html once the port is done. #}
 
     <!-- Flag Picker -->
-    <div class="flag-picker">
-        <span class="flag-picker-label">your color</span>
-        <div class="flag-picker-dots">
-            <template x-for="f in flagDefs" :key="f.color">
-                <button
-                    class="flag-dot"
-                    :class="{ 'active': activeFlag === f.color, 'flag-dot--final': f.color === 0 }"
-                    :style="`--dot-color: ${f.hex}; --dot-glow: ${f.glow}`"
-                    :title="f.color === 0 ? 'final pick' : `${f.label} - pick your color, each person uses a different one`"
-                    @click="setActiveFlag(f.color)"
-                >
-                    <span class="flag-dot-inner"></span>
-                    <span class="flag-dot-label" x-text="f.label"></span>
-                </button>
-            </template>
-        </div>
-        <span class="flag-picker-hint">select a color to mark your favorites</span>
-    </div>
 
     <!-- Toolbar -->
     <div class="gallery-toolbar">
@@ -84,54 +66,7 @@
         </div>
     </template>
 
-    <div class="photo-grid">
-        {% for photo in photos %}
-        <div class="photo-card"
-             x-data="{ photoId: {{ photo.id }}, photoIndex: {{ forloop.counter0 }} }"
-             :class="{ 'photo-card--selected': isSelected(photoId), 'photo-card--select-mode': selectMode }"
-             x-show="(filterFlags.length === 0 || filterFlags.some(f => photoFlags[photoId]?.includes(f))) && (editedFilter === 'all' || (editedFilter === 'edited' && photoEdited[photoId]) || (editedFilter === 'originals' && !photoEdited[photoId]))"
-             data-photo-id="{{ photo.id }}"
-             data-preview-url="{{ photo.preview_url }}"
-             data-filename="{{ photo.filename }}"
-             data-flags="{{ photo.flags }}"
-             data-is-edited="{{ photo.is_edited|yesno:'true,false' }}"
-             @click="selectMode ? toggleSelect(photoId) : openLightbox(photoIndex)">
-            <img
-                src="{{ photo.thumbnail_url }}"
-                alt="{{ photo.filename }}"
-                loading="lazy"
-            >
-            <!-- Select mode checkmark -->
-            <div class="card-select-overlay" x-show="selectMode" style="pointer-events: none">
-                <span class="card-checkmark" x-show="isSelected(photoId)">&#10003;</span>
-            </div>
-            <!-- Flag dots on card -->
-            <div class="card-flags">
-                <template x-for="f in flagDefs" :key="f.color">
-                    <span
-                        class="card-flag-dot"
-                        :style="`--dot-color: ${f.hex}`"
-                        x-show="photoFlags[photoId]?.includes(f.color)"
-                        x-transition.opacity
-                    ></span>
-                </template>
-            </div>
-            <div class="photo-actions">
-                <button
-                    @click.stop="toggleFlag(photoId)"
-                    :class="{ 'active': photoFlags[photoId]?.includes(activeFlag) }"
-                    :style="activeFlagStyle"
-                    class="btn-select"
-                >
-                    <span x-text="photoFlags[photoId]?.includes(activeFlag) ? '&#9829;' : '&#9825;'">&#9825;</span>
-                </button>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- Toast notification -->
-    <div x-show="toast" x-cloak x-transition.opacity class="toast" x-text="toast"></div>
+    <!-- Grid -->
 
     <!-- Download progress toast -->
     <div x-show="downloading" x-cloak x-transition.opacity
