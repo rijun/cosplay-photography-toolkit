@@ -6,6 +6,9 @@ const DEFAULT_FLAG = 1
 
 const TOAST_MS = 3000
 
+// Long enough to outlast the click a dismissal gesture synthesizes.
+const GHOST_CLICK_MS = 300
+
 const flagKey = (token: string) => `gallery-flag-${token}`
 
 function readStoredFlag(token: string): number {
@@ -35,6 +38,9 @@ class GalleryState {
 
     // Private so every writing goes through the setter and gets persisted.
     #activeFlag = $state(DEFAULT_FLAG)
+
+    // Timestamps, not state: nothing renders from them.
+    #dismissedAt = 0
 
     // A timer handle, not state: nothing renders from it.
     #toastTimer: ReturnType<typeof setTimeout> | undefined
@@ -81,6 +87,23 @@ class GalleryState {
 
     isSelected(id: number): boolean {
         return this.selected.includes(id)
+    }
+
+    /**
+     * Open a photo by its index in `visible`.
+     *
+     * Ignored briefly after a dismissal gesture: a short flick stays inside the
+     * browser's tap slop, so a click is synthesized after pointerup and lands on
+     * the grid card the lightbox was covering.
+     */
+    openPhoto(index: number) {
+        if (Date.now() - this.#dismissedAt < GHOST_CLICK_MS) return
+        this.lightboxIndex = index
+    }
+
+    closeLightbox(viaGesture = false) {
+        if (viaGesture) this.#dismissedAt = Date.now()
+        this.lightboxIndex = null
     }
 
     /** Transient message, auto-dismissed. Replaces any message still showing. */

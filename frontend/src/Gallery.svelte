@@ -1,5 +1,6 @@
 <script lang="ts">
     import PhotoGrid from './PhotoGrid.svelte'
+    import Lightbox from './Lightbox.svelte'
     import FlagPicker from './FlagPicker.svelte'
     import Filters from './Filters.svelte'
     import { gallery } from './lib/state.svelte'
@@ -10,6 +11,9 @@
     <FlagPicker />
     <Filters />
     <PhotoGrid />
+    {#if gallery.lightboxOpen}
+        <Lightbox />
+    {/if}
     <!-- Toast notification -->
     {#if gallery.toast}
         <div class="toast" transition:fade>{gallery.toast}</div>

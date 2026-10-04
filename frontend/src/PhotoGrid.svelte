@@ -10,13 +10,15 @@
 </script>
 
 <div class="photo-grid">
-    {#each gallery.visible as photo (photo.id)}
+    {#each gallery.visible as photo, i (photo.id)}
         <div
             class="photo-card"
             class:photo-card--selected={gallery.isSelected(photo.id)}
             class:photo-card--select-mode={gallery.selectMode}
         >
-            <img src={photo.thumbnail_url} alt={photo.filename} loading="lazy" />
+            <button class="photo-open" onclick={() => gallery.openPhoto(i)}>
+                <img src={photo.thumbnail_url} alt={photo.filename} loading="lazy" />
+            </button>
 
             {#if gallery.selectMode}
                 <div class="card-select-overlay" style="pointer-events: none">
@@ -38,10 +40,7 @@
                     class="btn-select"
                     class:active={photo.flags.includes(gallery.activeFlag)}
                     style={activeFlagStyle}
-                    onclick={(event) => {
-                        event.stopPropagation()
-                        toggleFlag(photo)
-                    }}
+                    onclick={() => toggleFlag(photo)}
                 >
                     <span>{photo.flags.includes(gallery.activeFlag) ? '♥' : '♡'}</span>
                 </button>
@@ -79,6 +78,15 @@
 
     .photo-card--selected img {
         opacity: 0.82;
+    }
+
+    /* A button so the photo is reachable by keyboard; styled away to nothing. */
+    .photo-open {
+        display: block;
+        width: 100%;
+        padding: 0;
+        border: none;
+        background: none;
     }
 
     .photo-card img {
