@@ -11,36 +11,29 @@
 
 <div class="photo-grid">
     {#each gallery.visible as photo, i (photo.id)}
-        <div
-            class="photo-card"
-            class:photo-card--selected={gallery.isSelected(photo.id)}
-            class:photo-card--select-mode={gallery.selectMode}
-        >
-            <button
-                class="photo-open"
-                onclick={() => (gallery.selectMode ? toggleSelect(photo.id) : gallery.openPhoto(i))}
-            >
+        <div class="card" class:selected={gallery.isSelected(photo.id)} class:select-mode={gallery.selectMode}>
+            <button class="open" onclick={() => (gallery.selectMode ? toggleSelect(photo.id) : gallery.openPhoto(i))}>
                 <img src={photo.thumbnail_url} alt={photo.filename} loading="lazy" />
             </button>
 
             {#if gallery.selectMode}
-                <div class="card-select-overlay" style="pointer-events: none">
+                <div class="select-overlay" style="pointer-events: none">
                     {#if gallery.isSelected(photo.id)}
-                        <span class="card-checkmark">&#10003;</span>
+                        <span class="checkmark">&#10003;</span>
                     {/if}
                 </div>
             {/if}
 
-            <div class="card-flags">
+            <div class="flags">
                 <!-- Iterate the defs, not photo.flags, so dot order is stable. -->
                 {#each FLAG_DEFS.filter((f) => photo.flags.includes(f.color)) as flag (flag.color)}
-                    <span class="card-flag-dot" style="--dot-color: {flag.hex}"></span>
+                    <span class="flag-dot" style="--dot-color: {flag.hex}"></span>
                 {/each}
             </div>
 
-            <div class="photo-actions">
+            <div class="actions">
                 <button
-                    class="btn-select"
+                    class="heart-btn"
                     class:active={photo.flags.includes(gallery.activeFlag)}
                     style={activeFlagStyle}
                     onclick={() => toggleFlag(photo)}
@@ -60,7 +53,7 @@
     }
 
     /* --- Card --- */
-    .photo-card {
+    .card {
         position: relative;
         padding: 0.3rem 0.3rem 0.2rem;
         overflow: hidden;
@@ -70,18 +63,18 @@
         transition: box-shadow 0.25s ease;
     }
 
-    .photo-card--select-mode {
+    .card.select-mode {
         cursor: pointer;
     }
 
-    .photo-card--selected {
+    .card.selected {
         box-shadow:
             0 0 0 2.5px var(--rose),
             0 4px 16px rgba(var(--rose-soft-rgb), 0.3);
     }
 
     /* A button so the photo is reachable by keyboard; styled away to nothing. */
-    .photo-open {
+    .open {
         display: block;
         width: 100%;
         padding: 0;
@@ -89,7 +82,7 @@
         background: none;
     }
 
-    .photo-card img {
+    .card img {
         display: block;
         width: 100%;
         aspect-ratio: 1 / 1;
@@ -100,12 +93,12 @@
         transition: filter 0.25s;
     }
 
-    .photo-card--selected img {
+    .card.selected img {
         opacity: 0.82;
     }
 
     /* --- Select mode checkmark --- */
-    .card-select-overlay {
+    .select-overlay {
         position: absolute;
         inset: 0.3rem;
         z-index: 6;
@@ -116,7 +109,7 @@
         border-radius: 2px;
     }
 
-    .card-checkmark {
+    .checkmark {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -131,7 +124,7 @@
     }
 
     /* --- Flag dots --- */
-    .card-flags {
+    .flags {
         position: absolute;
         top: 0.5rem;
         left: 0.5rem;
@@ -140,7 +133,7 @@
         gap: 3px;
     }
 
-    .card-flag-dot {
+    .flag-dot {
         display: block;
         width: 9px;
         height: 9px;
@@ -152,7 +145,7 @@
     }
 
     /* --- Flag toggle --- */
-    .photo-actions {
+    .actions {
         position: absolute;
         right: 0.3rem;
         bottom: 0.3rem;
@@ -164,7 +157,7 @@
         background: linear-gradient(to top, rgba(var(--cream-rgb), 0.9), transparent);
     }
 
-    .btn-select {
+    .heart-btn {
         min-width: 44px;
         min-height: 36px;
         padding: 0.3rem 0.65rem;
@@ -183,11 +176,11 @@
             background 0.2s;
     }
 
-    .btn-select:active {
+    .heart-btn:active {
         transform: scale(0.93);
     }
 
-    .btn-select.active {
+    .heart-btn.active {
         border-color: var(--active-flag-color, var(--rose-light));
         color: var(--active-flag-color, #c47a70);
         background: rgba(248, 232, 228, 0.95);
@@ -203,19 +196,19 @@
 
     /* --- Desktop: polaroid hover --- */
     @media (min-width: 768px) {
-        .photo-card {
+        .card {
             padding: 0.5rem 0.5rem 0.4rem;
             transition:
                 transform 0.3s ease,
                 box-shadow 0.3s ease;
         }
 
-        .photo-card:hover {
+        .card:hover {
             box-shadow: var(--shadow-lift);
             transform: translateY(-4px) rotate(0.4deg);
         }
 
-        .photo-card:hover img {
+        .card:hover img {
             filter: saturate(1) contrast(1);
         }
     }

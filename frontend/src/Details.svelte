@@ -51,30 +51,30 @@
 {#if gallery.lightboxPhoto}
     {@const photo = gallery.lightboxPhoto}
 
-    <p class="photo-filename">{photo.filename}</p>
+    <p class="filename">{photo.filename}</p>
 
-    <div class="lightbox-flags">
+    <div class="flags">
         {#each FLAG_DEFS as flag (flag.color)}
             <button
-                class="lightbox-flag-btn"
+                class="flag-btn"
                 class:active={photo.flags.includes(flag.color)}
-                class:lightbox-flag-btn--final={flag.color === 0}
+                class:final={flag.color === 0}
                 style:--flag-color={flag.hex}
                 style:--flag-glow={flag.glow}
                 onclick={() => toggleFlag(photo, flag.color)}
             >
-                <span class="lightbox-flag-dot"></span>
-                <span class="lightbox-flag-label">{flag.label}</span>
+                <span class="flag-dot"></span>
+                <span class="flag-label">{flag.label}</span>
             </button>
         {/each}
     </div>
 
     <div class="comments-section">
         <h3>Comments</h3>
-        {#if loading}
-            <div class="comments-loading">loading...</div>
-        {:else}
-            <div>
+        <div class="comment-list">
+            {#if loading}
+                <div class="comment-loading">loading...</div>
+            {:else}
                 {#each comments as comment (comment.id)}
                     <div class="comment">
                         <p>{comment.body}</p>
@@ -83,18 +83,18 @@
                         {/if}
                     </div>
                 {/each}
-                <form class="comment-form" onsubmit={submit}>
-                    <textarea bind:value={draft} placeholder="Leave a comment..." rows="2"></textarea>
-                    <button type="submit" disabled={!draft.trim()}>Send</button>
-                </form>
-            </div>
-        {/if}
+            {/if}
+        </div>
+        <form class="comment-form" onsubmit={submit}>
+            <textarea bind:value={draft} placeholder="Leave a comment..." rows="2"></textarea>
+            <button type="submit" disabled={!draft.trim()}>Send</button>
+        </form>
     </div>
 {/if}
 
 <style>
     /* --- Filename --- */
-    .photo-filename {
+    .filename {
         margin-bottom: 1rem;
         padding-bottom: 0.75rem;
         border-bottom: 1px dashed rgba(var(--dust-rgb), 0.18);
@@ -104,14 +104,14 @@
     }
 
     /* --- Flags --- */
-    .lightbox-flags {
+    .flags {
         display: flex;
         flex-direction: column;
         gap: 0.3rem;
         margin-bottom: 1rem;
     }
 
-    .lightbox-flag-btn {
+    .flag-btn {
         display: flex;
         align-items: center;
         gap: 0.65rem;
@@ -126,22 +126,22 @@
         transition: all 0.18s ease;
     }
 
-    .lightbox-flag-btn:active {
+    .flag-btn:active {
         transform: scale(0.97);
     }
 
-    .lightbox-flag-btn.active {
+    .flag-btn.active {
         border-color: var(--flag-color);
         background: rgba(var(--blush-rgb), 0.08);
         box-shadow: 0 0 0 1.5px var(--flag-glow);
     }
 
-    .lightbox-flag-btn--final {
+    .flag-btn.final {
         position: relative;
         margin-top: 0.5rem;
     }
 
-    .lightbox-flag-btn--final::before {
+    .flag-btn.final::before {
         content: '';
         position: absolute;
         top: -0.35rem;
@@ -150,7 +150,7 @@
         border-top: 1px dashed rgba(var(--dust-rgb), 0.18);
     }
 
-    .lightbox-flag-dot {
+    .flag-dot {
         flex-shrink: 0;
         width: 14px;
         height: 14px;
@@ -162,12 +162,12 @@
             transform 0.2s;
     }
 
-    .lightbox-flag-btn.active .lightbox-flag-dot {
+    .flag-btn.active .flag-dot {
         opacity: 1;
         transform: scale(1.2);
     }
 
-    .lightbox-flag-label {
+    .flag-label {
         font-size: 0.78rem;
         font-weight: 600;
         letter-spacing: 0.1em;
@@ -176,7 +176,7 @@
         transition: color 0.2s;
     }
 
-    .lightbox-flag-btn.active .lightbox-flag-label {
+    .flag-btn.active .flag-label {
         color: var(--flag-color);
     }
 
@@ -194,7 +194,7 @@
         color: rgba(var(--dust-rgb), 0.55);
     }
 
-    .comments-loading {
+    .comment-loading {
         padding: 0.5rem 0;
         font-size: 0.75rem;
         font-style: italic;
@@ -277,43 +277,57 @@
 
     /* --- Desktop: light theme --- */
     @media (min-width: 768px) {
-        .photo-filename {
+        .filename {
             color: var(--text-muted);
         }
 
-        .lightbox-flag-btn {
+        .flag-btn {
             border-color: rgba(var(--dust-rgb), 0.15);
             background: rgba(var(--cream-rgb), 0.6);
         }
 
-        .lightbox-flag-btn:hover {
+        .flag-btn:hover {
             border-color: var(--flag-color);
             background: rgba(var(--blush-rgb), 0.8);
             transform: none;
         }
 
-        .lightbox-flag-btn.active {
+        .flag-btn.active {
             background: rgba(var(--blush-rgb), 0.95);
             box-shadow: 0 0 0 2px var(--flag-glow);
         }
 
-        .lightbox-flag-btn--final::before {
+        .flag-btn.final::before {
             border-top-color: rgba(var(--dust-rgb), 0.3);
         }
 
-        .lightbox-flag-btn:not(.active):hover .lightbox-flag-dot {
+        .flag-btn:not(.active):hover .flag-dot {
             opacity: 0.7;
         }
 
-        .lightbox-flag-label {
+        .flag-label {
             color: #a09890;
+        }
+
+        /* Fills the sidebar; the list scrolls so the panel never resizes. */
+        .comments-section {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .comment-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
         }
 
         .comments-section h3 {
             color: var(--text-secondary);
         }
 
-        .comments-loading {
+        .comment-loading {
             color: #b8a8a0;
         }
 

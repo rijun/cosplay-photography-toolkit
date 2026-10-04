@@ -12,11 +12,11 @@
 
 <div class="gallery">
     <FlagPicker />
-    <div class="gallery-toolbar">
-        <button class="btn-toolbar" class:active={gallery.selectMode} onclick={toggleSelectMode}>
+    <div class="toolbar">
+        <button class="toolbar-btn" class:active={gallery.selectMode} onclick={toggleSelectMode}>
             {gallery.selectMode ? 'Cancel' : 'Select'}
         </button>
-        <button class="btn-toolbar" disabled={gallery.zip.active} onclick={() => startDownload()}>
+        <button class="toolbar-btn" disabled={gallery.zip.active} onclick={() => startDownload()}>
             Download All
         </button>
     </div>
@@ -35,13 +35,13 @@
 
 <style>
     /* --- Toolbar --- */
-    .gallery-toolbar {
+    .toolbar {
         display: flex;
         gap: 0.5rem;
         margin-bottom: 0.875rem;
     }
 
-    .btn-toolbar {
+    .toolbar-btn {
         display: inline-flex;
         align-items: center;
         height: 44px;
@@ -60,11 +60,11 @@
         transition: all 0.2s;
     }
 
-    .btn-toolbar:active {
+    .toolbar-btn:active {
         transform: scale(0.96);
     }
 
-    .btn-toolbar.active {
+    .toolbar-btn.active {
         border-color: var(--rose);
         color: var(--rose-deep);
         background: rgba(var(--rose-soft-rgb), 0.18);

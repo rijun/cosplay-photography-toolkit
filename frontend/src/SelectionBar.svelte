@@ -6,12 +6,12 @@
 
 {#if gallery.selected.length > 0}
     <div class="selection-bar" transition:fade>
-        <span class="selection-count">{gallery.selected.length} selected</span>
-        <div class="selection-actions">
-            <button class="btn-selection" disabled={gallery.zip.active} onclick={() => startDownload(gallery.selected)}>
+        <span class="count">{gallery.selected.length} selected</span>
+        <div class="actions">
+            <button class="btn" disabled={gallery.zip.active} onclick={() => startDownload(gallery.selected)}>
                 Download
             </button>
-            <button class="btn-selection" onclick={() => (gallery.selected = [])}>Clear</button>
+            <button class="btn" onclick={() => (gallery.selected = [])}>Clear</button>
         </div>
     </div>
 {/if}
@@ -36,18 +36,18 @@
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
     }
 
-    .selection-count {
+    .count {
         font-size: 0.78rem;
         font-weight: 700;
         letter-spacing: 0.04em;
     }
 
-    .selection-actions {
+    .actions {
         display: flex;
         gap: 0.4rem;
     }
 
-    .btn-selection {
+    .btn {
         display: inline-flex;
         align-items: center;
         height: 32px;
@@ -66,7 +66,7 @@
         transition: background 0.2s;
     }
 
-    .btn-selection:active {
+    .btn:active {
         background: rgba(var(--cream-rgb), 0.24);
     }
 </style>

@@ -145,10 +145,10 @@
 >
     <!-- Carries the background so the dismiss gesture can fade opacity, which is
          compositor-only, rather than repainting .lightbox's background-color. -->
-    <div class="lightbox-fade" bind:this={backdropEl}></div>
+    <div class="fade" bind:this={backdropEl}></div>
 
-    <div class="lightbox-content">
-        <button class="lightbox-close" onclick={() => gallery.closeLightbox()}>&times;</button>
+    <div class="content">
+        <button class="close" onclick={() => gallery.closeLightbox()}>&times;</button>
 
         <div class="swiper" bind:this={swiperEl}>
             <div class="swiper-button-prev"></div>
@@ -164,15 +164,15 @@
             <div class="swiper-button-next"></div>
         </div>
 
-        <div class="lightbox-bottom">
-            <p class="lightbox-filename-mobile">{gallery.lightboxPhoto?.filename ?? ''}</p>
-            <button class="lightbox-details-btn" class:active={showDetails} onclick={() => (showDetails = !showDetails)}
+        <div class="bottom">
+            <p class="filename-mobile">{gallery.lightboxPhoto?.filename ?? ''}</p>
+            <button class="details-btn" class:active={showDetails} onclick={() => (showDetails = !showDetails)}
                 >&#9776;</button
             >
         </div>
 
-        <div class="lightbox-sidebar" class:is-open={showDetails}>
-            <div class="lightbox-sidebar-handle"></div>
+        <div class="sidebar" class:is-open={showDetails}>
+            <div class="sidebar-handle"></div>
             <Details />
         </div>
     </div>
@@ -189,13 +189,13 @@
     }
 
     /* Holds the background so the dismiss gesture fades opacity instead of repainting. */
-    .lightbox-fade {
+    .fade {
         position: absolute;
         inset: 0;
         background: #120e0c;
     }
 
-    .lightbox-content {
+    .content {
         position: relative;
         display: flex;
         flex-direction: column;
@@ -206,7 +206,7 @@
     }
 
     /* --- Close --- */
-    .lightbox-close {
+    .close {
         position: absolute;
         top: calc(0.75rem + var(--safe-top));
         right: 0.75rem;
@@ -227,7 +227,7 @@
             transform 0.2s;
     }
 
-    .lightbox-close:active {
+    .close:active {
         background: rgba(255, 255, 255, 0.2);
     }
 
@@ -246,7 +246,7 @@
     }
 
     /* --- Bottom bar (mobile) --- */
-    .lightbox-bottom {
+    .bottom {
         display: flex;
         flex-shrink: 0;
         align-items: center;
@@ -257,7 +257,7 @@
         background: rgba(22, 17, 15, 0.96);
     }
 
-    .lightbox-filename-mobile {
+    .filename-mobile {
         flex: 1;
         min-width: 0;
         overflow: hidden;
@@ -267,7 +267,7 @@
         color: rgba(var(--linen-rgb), 0.5);
     }
 
-    .lightbox-details-btn {
+    .details-btn {
         display: flex;
         flex-shrink: 0;
         align-items: center;
@@ -285,17 +285,17 @@
             color 0.15s;
     }
 
-    .lightbox-details-btn.active {
+    .details-btn.active {
         color: var(--rose-light);
         background: rgba(var(--rose-rgb), 0.25);
     }
 
-    .lightbox-details-btn:active {
+    .details-btn:active {
         background: rgba(255, 255, 255, 0.17);
     }
 
     /* --- Sidebar (bottom sheet on mobile) --- */
-    .lightbox-sidebar {
+    .sidebar {
         position: fixed;
         right: 0;
         bottom: 0;
@@ -315,11 +315,11 @@
         transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
     }
 
-    .lightbox-sidebar.is-open {
+    .sidebar.is-open {
         transform: translateY(0);
     }
 
-    .lightbox-sidebar-handle {
+    .sidebar-handle {
         width: 36px;
         height: 4px;
         margin: 0 auto 1rem;
@@ -335,13 +335,13 @@
             justify-content: center;
         }
 
-        .lightbox-fade {
+        .fade {
             background: rgba(30, 24, 22, 0.93);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
         }
 
-        .lightbox-content {
+        .content {
             flex-direction: row;
             align-items: center;
             gap: 1.25rem;
@@ -350,7 +350,7 @@
             overflow: visible;
         }
 
-        .lightbox-close {
+        .close {
             top: -1.25rem;
             right: -0.75rem;
             width: 2.25rem;
@@ -359,20 +359,23 @@
             background: rgba(var(--rose-soft-rgb), 0.3);
         }
 
-        .lightbox-close:hover {
+        .close:hover {
             background: rgba(var(--rose-soft-rgb), 0.5);
             transform: rotate(90deg);
         }
 
-        .lightbox-bottom {
+        .bottom {
             display: none;
         }
 
-        .lightbox-sidebar {
+        /* Stretches to the swiper's height. */
+        .sidebar {
             position: static;
+            display: flex;
+            flex-direction: column;
+            align-self: stretch;
             width: 280px;
             height: auto;
-            max-height: 90vh;
             padding: 1.25rem;
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -383,7 +386,7 @@
             transition: none;
         }
 
-        .lightbox-sidebar-handle {
+        .sidebar-handle {
             display: none;
         }
     }

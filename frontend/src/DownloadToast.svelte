@@ -9,21 +9,21 @@
 </script>
 
 {#if gallery.zip.active}
-    <div class="download-toast" class:download-toast--above-selection={gallery.selected.length > 0} transition:fade>
+    <div class="download-toast" class:raised={gallery.selected.length > 0} transition:fade>
         {#if finalizing}
-            <div class="download-toast-header">
-                <span class="download-toast-spinner"></span>
+            <div class="header">
+                <span class="spinner"></span>
                 <span>Finalizing download...</span>
-                <button class="download-toast-cancel" onclick={cancelDownload}>&times;</button>
+                <button class="cancel" onclick={cancelDownload}>&times;</button>
             </div>
         {:else}
             <div>
-                <div class="download-toast-header">
+                <div class="header">
                     <span>Preparing: {gallery.zip.done} / {gallery.zip.total} photos</span>
-                    <button class="download-toast-cancel" onclick={cancelDownload}>&times;</button>
+                    <button class="cancel" onclick={cancelDownload}>&times;</button>
                 </div>
-                <div class="download-toast-bar">
-                    <div class="download-toast-fill" style:width="{percent}%"></div>
+                <div class="bar">
+                    <div class="fill" style:width="{percent}%"></div>
                 </div>
             </div>
         {/if}
@@ -50,18 +50,18 @@
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
     }
 
-    .download-toast--above-selection {
+    .download-toast.raised {
         bottom: calc(4.5rem + var(--safe-bottom, 0px));
     }
 
-    .download-toast-header {
+    .header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.75rem;
     }
 
-    .download-toast-spinner {
+    .spinner {
         display: inline-block;
         flex-shrink: 0;
         width: 14px;
@@ -72,7 +72,7 @@
         animation: spin 0.8s linear infinite;
     }
 
-    .download-toast-cancel {
+    .cancel {
         padding: 0;
         border: none;
         font-size: 1.1rem;
@@ -83,11 +83,11 @@
         cursor: pointer;
     }
 
-    .download-toast-cancel:hover {
+    .cancel:hover {
         opacity: 1;
     }
 
-    .download-toast-bar {
+    .bar {
         height: 4px;
         margin-top: 0.5rem;
         overflow: hidden;
@@ -95,7 +95,7 @@
         background: rgba(255, 255, 255, 0.15);
     }
 
-    .download-toast-fill {
+    .fill {
         height: 100%;
         border-radius: 2px;
         background: var(--rose);

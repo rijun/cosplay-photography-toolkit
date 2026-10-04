@@ -4,24 +4,24 @@
 </script>
 
 <div class="flag-picker">
-    <span class="flag-picker-label">your color</span>
-    <div class="flag-picker-dots">
+    <span class="label">your color</span>
+    <div class="dots">
         {#each FLAG_DEFS as f (f.color)}
             <button
-                class="flag-dot"
+                class="dot"
                 class:active={gallery.activeFlag === f.color}
-                class:flag-dot--final={f.color === 0}
+                class:final={f.color === 0}
                 style:--dot-color={f.hex}
                 style:--dot-glow={f.glow}
                 title={f.color === 0 ? 'final pick' : `${f.label} - pick your color, each person uses a different one`}
                 onclick={() => (gallery.activeFlag = f.color)}
             >
-                <span class="flag-dot-inner"></span>
-                <span class="flag-dot-label">{f.label}</span>
+                <span class="swatch"></span>
+                <span class="dot-label">{f.label}</span>
             </button>
         {/each}
     </div>
-    <span class="flag-picker-hint">select a color to mark your favorites</span>
+    <span class="hint">select a color to mark your favorites</span>
 </div>
 
 <style>
@@ -47,7 +47,7 @@
         display: none;
     }
 
-    .flag-picker-label {
+    .label {
         flex-shrink: 0;
         font-size: 0.62rem;
         font-weight: 700;
@@ -58,14 +58,14 @@
     }
 
     /* --- Dots --- */
-    .flag-picker-dots {
+    .dots {
         display: flex;
         flex: 1;
         justify-content: space-evenly;
         gap: 0.1rem;
     }
 
-    .flag-dot {
+    .dot {
         display: flex;
         flex-direction: column;
         flex-shrink: 0;
@@ -83,17 +83,17 @@
         transition: background 0.2s;
     }
 
-    .flag-dot:active {
+    .dot:active {
         background: rgba(var(--dust-rgb), 0.12);
     }
 
-    .flag-dot--final {
+    .dot.final {
         margin-left: 0.2rem;
         padding-left: 0.5rem;
         border-left: 1.5px solid var(--border);
     }
 
-    .flag-dot-inner {
+    .swatch {
         display: block;
         width: 20px;
         height: 20px;
@@ -107,7 +107,7 @@
             box-shadow 0.2s;
     }
 
-    .flag-dot.active .flag-dot-inner {
+    .dot.active .swatch {
         box-shadow:
             0 0 0 3px var(--dot-glow),
             0 2px 8px rgba(0, 0, 0, 0.1);
@@ -116,8 +116,8 @@
     }
 
     /* Labels and hint are desktop-only. */
-    .flag-dot-label,
-    .flag-picker-hint {
+    .dot-label,
+    .hint {
         display: none;
     }
 
@@ -129,17 +129,17 @@
             overflow: visible;
         }
 
-        .flag-dot--final {
+        .dot.final {
             margin-left: 0.35rem;
             padding-left: 0.6rem;
         }
 
-        .flag-dot:not(.active):hover .flag-dot-inner {
+        .dot:not(.active):hover .swatch {
             opacity: 0.7;
             transform: scale(1.1);
         }
 
-        .flag-dot-label {
+        .dot-label {
             display: block;
             font-size: 0.55rem;
             font-weight: 600;
@@ -149,11 +149,11 @@
             transition: color 0.2s;
         }
 
-        .flag-dot.active .flag-dot-label {
+        .dot.active .dot-label {
             color: var(--dot-color);
         }
 
-        .flag-picker-hint {
+        .hint {
             display: block;
             padding-left: 0.5rem;
             border-left: 1px solid var(--border);

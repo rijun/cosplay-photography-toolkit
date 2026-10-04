@@ -10,21 +10,19 @@
 </script>
 
 <div class="filter-bar">
-    <span class="filter-bar-label">show</span>
-    <button
-        class="filter-chip"
-        class:active={gallery.filterFlags.length === 0}
-        onclick={() => (gallery.filterFlags = [])}>all</button
+    <span class="label">show</span>
+    <button class="chip" class:active={gallery.filterFlags.length === 0} onclick={() => (gallery.filterFlags = [])}
+        >all</button
     >
     {#each FLAG_DEFS as f (f.color)}
         <button
-            class="filter-chip"
+            class="chip"
             class:active={gallery.filterFlags.includes(f.color)}
             style:--chip-color={f.hex}
             style:--chip-glow={f.glow}
             onclick={() => toggleFilter(f.color)}
         >
-            <span class="filter-chip-dot"></span>
+            <span class="dot"></span>
             <span>{f.label}</span>
         </button>
     {/each}
@@ -32,19 +30,19 @@
 
 {#if gallery.hasEdited}
     <div class="filter-bar">
-        <span class="filter-bar-label">type</span>
+        <span class="label">type</span>
         <button
-            class="filter-chip"
+            class="chip"
             class:active={gallery.editedFilter === 'all'}
             onclick={() => (gallery.editedFilter = 'all')}>all</button
         >
         <button
-            class="filter-chip"
+            class="chip"
             class:active={gallery.editedFilter === 'originals'}
             onclick={() => (gallery.editedFilter = 'originals')}>originals</button
         >
         <button
-            class="filter-chip"
+            class="chip"
             class:active={gallery.editedFilter === 'edited'}
             onclick={() => (gallery.editedFilter = 'edited')}>edited</button
         >
@@ -67,7 +65,7 @@
         display: none;
     }
 
-    .filter-bar-label {
+    .label {
         flex-shrink: 0;
         margin-right: 0.15rem;
         font-size: 0.62rem;
@@ -79,7 +77,7 @@
     }
 
     /* --- Chips --- */
-    .filter-chip {
+    .chip {
         display: inline-flex;
         flex-shrink: 0;
         align-items: center;
@@ -100,11 +98,11 @@
         transition: all 0.2s;
     }
 
-    .filter-chip:active {
+    .chip:active {
         transform: scale(0.95);
     }
 
-    .filter-chip.active {
+    .chip.active {
         border-color: var(--chip-color, var(--rose));
         color: var(--chip-color, var(--rose-deep));
         background: rgba(var(--cream-rgb), 0.95);
@@ -112,13 +110,13 @@
     }
 
     /* "all" chip has no dot color vars, use rose as default active state */
-    .filter-chip:first-of-type.active {
+    .chip:first-of-type.active {
         border-color: var(--rose-light);
         color: var(--rose-deep);
         box-shadow: none;
     }
 
-    .filter-chip-dot {
+    .dot {
         flex-shrink: 0;
         width: 8px;
         height: 8px;
@@ -128,7 +126,7 @@
         transition: opacity 0.2s;
     }
 
-    .filter-chip.active .filter-chip-dot {
+    .chip.active .dot {
         opacity: 1;
     }
 </style>
