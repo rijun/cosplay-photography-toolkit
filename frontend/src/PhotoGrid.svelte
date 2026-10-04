@@ -1,6 +1,6 @@
 <script lang="ts">
     import { gallery } from './lib/state.svelte'
-    import { toggleFlag } from './lib/actions'
+    import { toggleFlag, toggleSelect } from './lib/actions'
     import { FLAG_DEFS, flagDef } from './lib/flags'
 
     const activeDef = $derived(flagDef(gallery.activeFlag))
@@ -16,7 +16,10 @@
             class:photo-card--selected={gallery.isSelected(photo.id)}
             class:photo-card--select-mode={gallery.selectMode}
         >
-            <button class="photo-open" onclick={() => gallery.openPhoto(i)}>
+            <button
+                class="photo-open"
+                onclick={() => (gallery.selectMode ? toggleSelect(photo.id) : gallery.openPhoto(i))}
+            >
                 <img src={photo.thumbnail_url} alt={photo.filename} loading="lazy" />
             </button>
 

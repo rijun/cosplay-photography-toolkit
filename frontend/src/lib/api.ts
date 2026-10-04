@@ -53,3 +53,32 @@ export async function addComment(token: string, photoId: number, body: string): 
     const response = await post(`/g/${token}/photos/${photoId}/comment`, { body })
     return response.json()
 }
+
+export interface ZipProgress {
+    status: string
+    progress_current: number
+    progress_total: number
+}
+
+/** `photoIds` null means the whole gallery, ignoring any active filter. */
+export async function startDownload(token: string, photoIds: number[] | null): Promise<{ download_id: string }> {
+    const response = await post(`/g/${token}/download/start`, { photo_ids: photoIds })
+    return response.json()
+}
+
+export async function downloadProgress(token: string, downloadId: string): Promise<ZipProgress> {
+    const response = await fetch(`/g/${token}/download/${downloadId}/progress`)
+    if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}`)
+    }
+    return response.json()
+}
+
+export async function cancelDownload(token: string, downloadId: string): Promise<void> {
+    await post(`/g/${token}/download/${downloadId}/cancel`)
+}
+
+/** A navigation, not a fetch — the browser needs to handle the attachment. */
+export function downloadFileUrl(token: string, downloadId: string): string {
+    return `/g/${token}/download/${downloadId}/file`
+}

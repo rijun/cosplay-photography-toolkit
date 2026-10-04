@@ -31,3 +31,103 @@ export async function toggleFlag(photo: Photo, color = gallery.activeFlag) {
         gallery.showToast('Could not save, please try again.')
     }
 }
+
+const POLL_MS = 1500
+
+// Zipping that makes no progress for this long has stalled. Skipped once the
+// server is uploading to R2, which reports no progress and enforces its own limit.
+const STALL_MS = 30_000
+
+// Neither is state: nothing renders from a timer handle or the download's id.
+let pollTimer: ReturnType<typeof setTimeout> | undefined
+let zipId: string | undefined
+
+function stopPolling() {
+    clearTimeout(pollTimer)
+    pollTimer = undefined
+}
+
+function failDownload() {
+    stopPolling()
+    gallery.zip.active = false
+    gallery.showToast('Download failed, please try again')
+}
+
+/**
+ * Chained timeouts rather than setInterval: a slow response would otherwise let
+ * requests overlap and arrive out of order.
+ */
+function poll(downloadId: string) {
+    let lastDone = -1
+    let stalledSince = Date.now()
+
+    const tick = async () => {
+        try {
+            const progress = await api.downloadProgress(gallery.token, downloadId)
+            gallery.zip.done = progress.progress_current
+            gallery.zip.total = progress.progress_total
+
+            const finalizing = progress.progress_total > 0 && progress.progress_current >= progress.progress_total
+            if (!finalizing) {
+                if (progress.progress_current !== lastDone) {
+                    lastDone = progress.progress_current
+                    stalledSince = Date.now()
+                } else if (Date.now() - stalledSince > STALL_MS) {
+                    return failDownload()
+                }
+            }
+
+            if (progress.status === 'completed') {
+                stopPolling()
+                gallery.zip.active = false
+                window.location.href = api.downloadFileUrl(gallery.token, downloadId)
+                return
+            }
+            if (progress.status === 'failed') return failDownload()
+        } catch {
+            // A network hiccup is not a failed zip; keep asking.
+        }
+        pollTimer = setTimeout(tick, POLL_MS)
+    }
+
+    pollTimer = setTimeout(tick, POLL_MS)
+}
+
+/** Omit `photoIds` to download the whole gallery, ignoring any active filter. */
+export async function startDownload(photoIds?: number[]) {
+    stopPolling()
+    gallery.zip.active = true
+    gallery.zip.done = 0
+    gallery.zip.total = photoIds ? photoIds.length : gallery.photos.length
+
+    try {
+        const { download_id } = await api.startDownload(gallery.token, photoIds ?? null)
+        zipId = download_id
+        poll(download_id)
+    } catch {
+        failDownload()
+    }
+}
+
+export async function cancelDownload() {
+    stopPolling()
+    gallery.zip.active = false
+    if (!zipId) return
+    try {
+        await api.cancelDownload(gallery.token, zipId)
+    } catch {
+        // Best effort: the user has already moved on.
+    }
+    zipId = undefined
+}
+
+export function toggleSelectMode() {
+    gallery.selectMode = !gallery.selectMode
+    if (!gallery.selectMode) gallery.selected = []
+}
+
+export function toggleSelect(photoId: number) {
+    const index = gallery.selected.indexOf(photoId)
+    if (index === -1) gallery.selected.push(photoId)
+    else gallery.selected.splice(index, 1)
+}
