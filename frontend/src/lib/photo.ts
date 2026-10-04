@@ -9,4 +9,5 @@ export interface Photo {
     preview_url: string
     flags: number[]
     is_edited: boolean
+    comment_count: number
 }

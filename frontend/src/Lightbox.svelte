@@ -19,6 +19,11 @@
     let backdropEl = $state<HTMLElement | undefined>()
     let swiper: Swiper | undefined
 
+    // Follows the active photo only once a slide settles, so the stage never resizes mid-swipe.
+    let stageId = $state(untrack(() => gallery.lightboxPhoto?.id))
+    // Sizes the desktop stage so the arrows and sidebar hug the photo.
+    const stageRatio = $derived((stageId !== undefined && gallery.ratios[stageId]) || 2 / 3)
+
     // Plain variables, not $state: these drive styles imperatively, per frame.
     const pointers = new Set<number>()
     let startX = 0
@@ -43,6 +48,7 @@
             on: {
                 // Keeps the filename, flags and comments on the photo being viewed.
                 slideChange: (instance) => (gallery.lightboxIndex = instance.activeIndex),
+                slideChangeTransitionEnd: () => (stageId = gallery.lightboxPhoto?.id),
             },
             navigation: {
                 nextEl: '.swiper-button-next',
@@ -147,7 +153,7 @@
          compositor-only, rather than repainting .lightbox's background-color. -->
     <div class="fade" bind:this={backdropEl}></div>
 
-    <div class="content">
+    <div class="content" style:--stage-ratio={stageRatio}>
         <button class="close" onclick={() => gallery.closeLightbox()}>&times;</button>
 
         <div class="swiper" bind:this={swiperEl}>
@@ -156,7 +162,12 @@
                 {#each gallery.visible as photo (photo.id)}
                     <div class="swiper-slide">
                         <div class="swiper-zoom-container">
-                            <img src={photo.preview_url} alt={photo.filename} loading="lazy" />
+                            <img
+                                src={photo.preview_url}
+                                alt={photo.filename}
+                                loading="lazy"
+                                onload={(e) => gallery.learnRatio(photo.id, e)}
+                            />
                         </div>
                     </div>
                 {/each}
@@ -345,7 +356,7 @@
             flex-direction: row;
             align-items: center;
             gap: 1.25rem;
-            width: 95vw;
+            width: auto;
             height: 90vh;
             overflow: visible;
         }
@@ -362,6 +373,13 @@
         .close:hover {
             background: rgba(var(--rose-soft-rgb), 0.5);
             transform: rotate(90deg);
+        }
+
+        /* Matches the settled photo's shape; capped so the sidebar still fits in 95vw. */
+        .swiper {
+            flex: none;
+            width: min(calc(95vw - 280px - 1.25rem), calc(90vh * var(--stage-ratio)));
+            border-radius: 8px;
         }
 
         .bottom {

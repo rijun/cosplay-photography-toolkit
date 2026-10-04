@@ -13,7 +13,12 @@
     {#each gallery.visible as photo, i (photo.id)}
         <div class="card" class:selected={gallery.isSelected(photo.id)} class:select-mode={gallery.selectMode}>
             <button class="open" onclick={() => (gallery.selectMode ? toggleSelect(photo.id) : gallery.openPhoto(i))}>
-                <img src={photo.thumbnail_url} alt={photo.filename} loading="lazy" />
+                <img
+                    src={photo.thumbnail_url}
+                    alt={photo.filename}
+                    loading="lazy"
+                    onload={(e) => gallery.learnRatio(photo.id, e)}
+                />
             </button>
 
             {#if gallery.selectMode}

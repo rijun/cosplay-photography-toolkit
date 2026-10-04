@@ -58,6 +58,10 @@ class GalleryState {
 
     toast = $state<string | null>(null)
 
+    // Width/height per photo id, from whichever image loads first: thumbnails and
+    // previews share a shape. Sizes the desktop lightbox stage.
+    ratios = $state<Record<number, number>>({})
+
     zip = $state({ active: false, done: 0, total: 0 })
 
     get visible(): Photo[] {
@@ -87,6 +91,12 @@ class GalleryState {
 
     isSelected(id: number): boolean {
         return this.selected.includes(id)
+    }
+
+    learnRatio(id: number, event: Event) {
+        const img = event.currentTarget as HTMLImageElement
+        // ??=: the first answer is final, so a rounding-different preview can't nudge the stage.
+        this.ratios[id] ??= img.naturalWidth / img.naturalHeight
     }
 
     /**

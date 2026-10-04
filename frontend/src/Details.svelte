@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte'
     import * as api from './lib/api'
     import { toggleFlag } from './lib/actions'
     import { FLAG_DEFS } from './lib/flags'
@@ -15,8 +16,14 @@
         const photo = gallery.lightboxPhoto
         if (!photo) return
 
+        comments = []
+        loading = false
+        // untrack: submit() bumps the count, which must not refetch and wipe the new comment.
+        if (untrack(() => photo.comment_count) === 0) return
+
         let stale = false
-        loading = true
+        // Only show "loading..." if the fetch is slow, so fast replies don't flash it.
+        const timer = setTimeout(() => (loading = true), 200)
         api.comments(gallery.token, photo.id)
             .then((fetched) => {
                 if (!stale) comments = fetched
@@ -25,11 +32,13 @@
                 if (!stale) comments = []
             })
             .finally(() => {
+                clearTimeout(timer)
                 if (!stale) loading = false
             })
 
         return () => {
             stale = true
+            clearTimeout(timer)
         }
     })
 
@@ -41,6 +50,7 @@
 
         try {
             comments.push(await api.addComment(gallery.token, photo.id, body))
+            photo.comment_count++
             draft = ''
         } catch {
             gallery.showToast('Could not save comment, please try again')
