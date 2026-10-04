@@ -2,7 +2,7 @@
 Description=Cosplay photography toolkit - celery worker
 
 [Service]
-WorkingDirectory=%h/opt/cosplay-photography-toolkit/web
+WorkingDirectory=%h/opt/cosplay-photography-toolkit/backend
 ExecStart=/usr/bin/uv run --group web celery -A config worker --loglevel INFO --concurrency=2
 Restart=always
 RestartSec=5

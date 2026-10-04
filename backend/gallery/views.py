@@ -3,6 +3,7 @@ from urllib.parse import quote
 
 import nh3
 from django.conf import settings
+from django.db.models import Count
 from django.http import Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -15,7 +16,7 @@ from .tasks import build_zip
 
 @ensure_csrf_cookie
 def view_gallery(request, token):
-    """GET /g/{token} - Render gallery HTML view."""
+    """GET /g/{token} - Render HTML scaffold for Svelte gallery."""
     try:
         gallery = Gallery.objects.get(token=token, is_active=True)
     except Gallery.DoesNotExist:
@@ -30,6 +31,7 @@ def view_gallery(request, token):
         .order_by('display_order')
         .select_related('photo')
         .prefetch_related('photo__flags')
+        .annotate(comment_count=Count('photo__comments'))
     )
 
     photo_data = []
@@ -42,11 +44,12 @@ def view_gallery(request, token):
             'preview_url': photo.preview_url,
             'flags': [f.color for f in photo.flags.all()],
             'is_edited': photo.is_edited,
+            'comment_count': membership.comment_count
         })
 
     return render(request, 'gallery.html', {
         'gallery': gallery,
-        'photos': photo_data,
+        'photos': photo_data
     })
 
 

@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_vite',
     'gallery.apps.GalleryConfig',
     'api.apps.ApiConfig',
 ]
@@ -146,11 +147,30 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Vite build output, served under /static/vite/. BASE_DIR is backend/, so .parent is the repo root.
+STATICFILES_DIRS = [
+    ("vite", BASE_DIR.parent / "frontend" / "dist"),
+]
+
+# dev_mode is its own flag, not DEBUG: runserver without `npm run dev` must not emit dev-server URLs.
+DJANGO_VITE = {
+    "default": {
+        "dev_mode": ENV.bool('VITE_DEV_MODE', default=False),
+        "static_url_prefix": "vite",
+    },
+}
+
 STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+if DEBUG:
+    # Read the watch-build's manifest in place, so dev needs no collectstatic.
+    DJANGO_VITE['default']['manifest_path'] = BASE_DIR.parent / 'frontend' / 'dist' / 'manifest.json'
+    # ManifestStaticFilesStorage raises without staticfiles.json, which only collectstatic writes.
+    STORAGES['staticfiles']['BACKEND'] = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Object Storage Configuration
 OBJECT_STORAGE_ENDPOINT_URL = ENV('OBJECT_STORAGE_ENDPOINT_URL', default='')

@@ -22,29 +22,69 @@ jobs:
       - run: uv run ruff check
       - run: uv run mypy --show-traceback
 
-  deploy:
-    needs: lint
-    if: github.ref == 'refs/heads/main'
+  frontend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Uberspace
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run check
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 1
+          if-no-files-found: error
+
+  deploy:
+    needs: [lint, frontend]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ vars.UBERSPACE_HOST }}
+      SSH_USER: ${{ vars.UBERSPACE_USER }}
+      APP_DIR: opt/cosplay-photography-toolkit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - name: Set up SSH
         env:
           SSH_KEY: ${{ secrets.UBERSPACE_SSH_KEY }}
-          SSH_HOST: ${{ vars.UBERSPACE_HOST }}
-          SSH_USER: ${{ vars.UBERSPACE_USER }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -t ed25519 "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      # --delete so stale hashed assets do not accumulate.
+      - name: Upload frontend build
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" "mkdir -p ${APP_DIR}/frontend/dist"
+          rsync -az --delete frontend/dist/ \
+            "${SSH_USER}@${SSH_HOST}:${APP_DIR}/frontend/dist/"
+
+      - name: Deploy to Uberspace
+        run: |
           ssh "${SSH_USER}@${SSH_HOST}" '
             set -e
             cd ~/opt/cosplay-photography-toolkit
             git pull
             uv sync --group web
-            uv run python web/manage.py migrate
-            uv run python web/manage.py collectstatic --noinput
+            uv run python backend/manage.py migrate
+            uv run python backend/manage.py collectstatic --noinput
             mkdir -p ~/.config/systemd/user
             install -m 644 -t ~/.config/systemd/user deploy/systemd/*.service
             systemctl --user daemon-reload

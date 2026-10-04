@@ -13,12 +13,12 @@ A self-hosted photo gallery and proofing tool for photographers. Clients receive
 
 ## Stack
 
-| Component | Technology                                 |
-|-----------|--------------------------------------------|
-| Web       | Django 6, Django REST Framework, Alpine.js |
-| CLI       | Click, httpx, boto3                        |
-| Database  | PostgreSQL                                 |
-| Storage   | S3-compatible                              |
+| Component | Technology                                       |
+|-----------|--------------------------------------------------|
+| Web       | Django 6, Django REST Framework, Svelte 5 + Vite |
+| CLI       | Click, httpx, boto3                              |
+| Database  | PostgreSQL                                       |
+| Storage   | S3-compatible                                    |
 
 ## Installation
 
@@ -96,7 +96,7 @@ No login required — the token provides access.
 
 ```bash
 # Run migrations
-cd web && python manage.py migrate
+cd backend && python manage.py migrate
 
 # Start dev server
 python manage.py runserver
@@ -115,9 +115,9 @@ the deploy step. Don't edit units on the server.
 
 ```bash
 uv sync --group web
-uv run python web/manage.py migrate
-uv run python web/manage.py collectstatic --noinput
-systemctl --user restart cosplay-photography-toolkit-web celery
+uv run python backend/manage.py migrate
+uv run python backend/manage.py collectstatic --noinput
+systemctl --user restart cosplay-photography-toolkit-backend celery
 ```
 
 Two flags that must stay:
@@ -128,7 +128,7 @@ Two flags that must stay:
 - `--no-control-socket`: gunicorn 25.1.0's control socket deadlocks forked
   workers ([#3509](https://github.com/benoitc/gunicorn/issues/3509)).
 
-Logs: `journalctl --user -u cosplay-photography-toolkit-web`
+Logs: `journalctl --user -u cosplay-photography-toolkit-backend`
 
 ## License
 

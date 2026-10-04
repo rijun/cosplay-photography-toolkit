@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% load django_vite %}
+
+{% block title %}{{ gallery.name }}{% endblock %}
+
+{% block head %}
+{% vite_hmr_client %}
+{% vite_asset 'src/gallery.ts' %}
+{% endblock %}
+
+{% block content %}
+<div class="gallery-container">
+    <h1>{{ gallery.name }}</h1>
+    <p class="gallery-tagline">~ select your favorites ~</p>
+
+    {{ photos|json_script:"photos" }}
+    <div id="svelte-root" data-token="{{ gallery.token }}"></div>
+</div>
+{% endblock %}

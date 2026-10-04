@@ -1,0 +1,179 @@
+/* === Cozy Lo-fi Anime Gallery — Mobile-First Warm Nostalgic Aesthetic === */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    /* Palette channels, for tints: rgba(var(--dust-rgb), 0.18) */
+    --rose-rgb: 212, 133, 122;
+    --rose-soft-rgb: 212, 165, 154;
+    --dust-rgb: 186, 143, 133;
+    --umber-rgb: 107, 87, 80;
+    --cocoa-rgb: 74, 50, 46;
+    --cream-rgb: 255, 252, 249;
+    --linen-rgb: 245, 237, 230;
+    --blush-rgb: 248, 238, 232;
+
+    --cream: rgb(var(--cream-rgb));
+    --linen: rgb(var(--linen-rgb));
+
+    --bg-0: #faf6f2;
+    --bg-1: var(--linen);
+    --bg-2: #f0e6dc;
+    --text-primary: #4a3f3a;
+    --text-secondary: #8a7a75;
+    --text-muted: #b0a098;
+    --text-on-dark: #e8ddd8;
+    --rose: rgb(var(--rose-rgb));
+    --rose-light: #e8c4bc;
+    --rose-deep: #8a5a50;
+    --rose-glow: rgba(var(--rose-rgb), 0.35);
+    --border: rgba(var(--dust-rgb), 0.2);
+    --border-strong: rgba(var(--dust-rgb), 0.4);
+    --shadow-soft: 0 2px 8px rgba(var(--umber-rgb), 0.08), 0 1px 3px rgba(var(--umber-rgb), 0.06);
+    --shadow-lift: 0 8px 24px rgba(var(--umber-rgb), 0.12), 0 4px 12px rgba(var(--dust-rgb), 0.08);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+}
+
+::selection {
+    background: rgba(216, 167, 156, 0.4);
+    color: var(--text-primary);
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(var(--dust-rgb), 0.3); border-radius: 4px; }
+
+body {
+    font-family: "Quicksand", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 50%, var(--bg-2) 100%);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+    /* Prevent callout on long-press and flash on tap */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
+
+/* === Floating Sakura Petals === */
+.sakura-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    overflow: hidden;
+}
+
+.sakura {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: radial-gradient(ellipse at 30% 30%, #fcd4d4 0%, #f8b4b4 40%, #e8989890 100%);
+    border-radius: 100% 0 100% 0;
+    opacity: 0;
+    animation: sakuraFall linear infinite;
+    filter: blur(0.3px);
+}
+
+.sakura::before {
+    content: '';
+    position: absolute;
+    width: 100%; height: 100%;
+    background: inherit;
+    border-radius: inherit;
+    transform: rotate(90deg);
+}
+
+@keyframes sakuraFall {
+    0%   { opacity: 0;   transform: translateY(-10vh) translateX(0)    rotate(0deg)   scale(0.8); }
+    10%  { opacity: 0.7; }
+    90%  { opacity: 0.5; }
+    100% { opacity: 0;   transform: translateY(105vh) translateX(80px) rotate(720deg) scale(0.6); }
+}
+
+/* Show only 5 petals on mobile, all 10 on desktop */
+.sakura:nth-child(1)  { left: 5%;  animation-duration: 14s; animation-delay: 0s; width: 9px;  height: 9px;  }
+.sakura:nth-child(2)  { left: 25%; animation-duration: 18s; animation-delay: 3s; width: 11px; height: 11px; }
+.sakura:nth-child(3)  { left: 50%; animation-duration: 16s; animation-delay: 6s; width: 9px;  height: 9px;  }
+.sakura:nth-child(4)  { left: 72%; animation-duration: 21s; animation-delay: 1s; width: 12px; height: 12px; }
+.sakura:nth-child(5)  { left: 88%; animation-duration: 15s; animation-delay: 8s; width: 8px;  height: 8px;  }
+.sakura:nth-child(n+6) { display: none; }
+
+/* =============================================
+   GALLERY CONTAINER
+   ============================================= */
+
+.gallery-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.25rem 1rem;
+    /* Extra bottom padding so fixed bars don't obscure content */
+    padding-bottom: calc(5rem + var(--safe-bottom));
+    position: relative;
+}
+
+/* =============================================
+   HEADER
+   ============================================= */
+
+h1 {
+    font-family: "Quicksand", sans-serif;
+    font-weight: 700;
+    font-size: 1.75rem;
+    color: rgb(var(--umber-rgb));
+    margin-bottom: 0.2rem;
+    letter-spacing: 0.02em;
+    display: inline-block;
+    position: relative;
+}
+
+h1::after {
+    content: '';
+    display: block;
+    width: 55%;
+    height: 2.5px;
+    margin-top: 0.4rem;
+    background: linear-gradient(90deg, var(--rose-light) 0%, var(--rose-light) 50%, transparent 100%);
+    border-radius: 2px;
+}
+
+.gallery-tagline {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.2em;
+    font-weight: 500;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}/* =============================================
+   DESKTOP — full experience
+   ============================================= */
+
+@media (min-width: 768px) {
+    /* Show all petals */
+    .sakura:nth-child(n+6) { display: block; }
+    .sakura:nth-child(6)  { left: 35%; animation-duration: 19s; animation-delay: 3s;  width: 12px; height: 12px; }
+    .sakura:nth-child(7)  { left: 55%; animation-duration: 14s; animation-delay: 5s;  width: 14px; height: 14px; }
+    .sakura:nth-child(8)  { left: 70%; animation-duration: 17s; animation-delay: 7s;  width: 10px; height: 10px; }
+    .sakura:nth-child(9)  { left: 85%; animation-duration: 21s; animation-delay: 2s;  width: 11px; height: 11px; }
+    .sakura:nth-child(10) { left: 92%; animation-duration: 15s; animation-delay: 9s;  width: 13px; height: 13px; }
+
+    .gallery-container {
+        padding: 2rem 2rem calc(2rem + var(--safe-bottom));
+    }
+
+    h1 {
+        font-size: 2.4rem;
+    }
+
+    h1::after { width: 60%; height: 3px; margin-top: 0.6rem; }
+
+    .gallery-tagline {
+        font-size: 0.9rem;
+        margin-bottom: 2.5rem;
+    }
+}

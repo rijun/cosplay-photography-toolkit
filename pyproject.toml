@@ -28,6 +28,7 @@ web = [
     "httpx>=0.28",
     "celery[redis]>=5.4",
     "redis>=5.0",
+    "django-vite>=3.2.0",
 ]
 cli = [
     "click>=8.1",
@@ -47,7 +48,7 @@ build-backend = "hatchling.build"
 packages = ["cli"]
 
 [tool.ruff]
-src = ["web", "cli"]
+src = ["backend", "cli"]
 line-length = 120
 extend-exclude = ["*/migrations/*"]
 
@@ -58,7 +59,7 @@ ignore = ["RUF012"]
 [tool.mypy]
 python_version = "3.14"
 plugins = ["mypy_django_plugin.main"]
-mypy_path = "web"
+mypy_path = "backend"
 packages = ["gallery", "api", "config", "cli"]
 warn_unused_configs = true
 check_untyped_defs = true
