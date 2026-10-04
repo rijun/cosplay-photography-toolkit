@@ -53,7 +53,11 @@ class GalleryState {
     selectMode = $state(false)
     selected = $state<number[]>([])
 
-    // Index into `visible`, not `photos`, as navigation walks the filtered set.
+    // `visible` as it was on open: unflagging the open photo under a flag filter
+    // must not pull it out of the lightbox. Raw: holds the same reactive photos.
+    lightboxPhotos = $state.raw<Photo[]>([])
+
+    // Index into `lightboxPhotos`.
     lightboxIndex = $state<number | null>(null)
 
     toast = $state<string | null>(null)
@@ -81,7 +85,7 @@ class GalleryState {
 
     get lightboxPhoto(): Photo | null {
         if (this.lightboxIndex === null) return null
-        return this.visible[this.lightboxIndex] ?? null
+        return this.lightboxPhotos[this.lightboxIndex] ?? null
     }
 
     /** Whether to render the originals/edited filter bar at all. */
@@ -108,12 +112,14 @@ class GalleryState {
      */
     openPhoto(index: number) {
         if (Date.now() - this.#dismissedAt < GHOST_CLICK_MS) return
+        this.lightboxPhotos = this.visible
         this.lightboxIndex = index
     }
 
     closeLightbox(viaGesture = false) {
         if (viaGesture) this.#dismissedAt = Date.now()
         this.lightboxIndex = null
+        this.lightboxPhotos = []
     }
 
     /** Transient message, auto-dismissed. Replaces any message still showing. */

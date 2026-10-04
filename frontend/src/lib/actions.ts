@@ -34,9 +34,9 @@ export async function toggleFlag(photo: Photo, color = gallery.activeFlag) {
 
 const POLL_MS = 1500
 
-// Zipping that makes no progress for this long has stalled. Skipped once the
-// server is uploading to R2, which reports no progress and enforces its own limit.
-const STALL_MS = 30_000
+// A running build that makes no progress for this long has stalled. Outlasts
+// Nextcloud's 60s read timeout, which fails the job server-side on its own.
+const STALL_MS = 90_000
 
 // Neither is state: nothing renders from a timer handle or the download's id.
 let pollTimer: ReturnType<typeof setTimeout> | undefined
@@ -51,6 +51,15 @@ function failDownload() {
     stopPolling()
     gallery.zip.active = false
     gallery.showToast('Download failed, please try again')
+    // A stalled job may still be alive server-side; stop it building a zip nobody waits for.
+    abandon()
+}
+
+function abandon() {
+    if (!zipId) return
+    // Best effort: the user has already moved on.
+    api.cancelDownload(gallery.token, zipId).catch(() => {})
+    zipId = undefined
 }
 
 /**
@@ -68,24 +77,28 @@ function poll(downloadId: string) {
             gallery.zip.total = progress.progress_total
 
             const finalizing = progress.progress_total > 0 && progress.progress_current >= progress.progress_total
-            if (!finalizing) {
-                if (progress.progress_current !== lastDone) {
-                    lastDone = progress.progress_current
-                    stalledSince = Date.now()
-                } else if (Date.now() - stalledSince > STALL_MS) {
-                    return failDownload()
-                }
+            // Only zipping can stall: a queued job waits for a free worker, and the
+            // R2 upload reports no progress and enforces its own limit.
+            if (progress.status !== 'processing' || finalizing || progress.progress_current !== lastDone) {
+                lastDone = progress.progress_current
+                stalledSince = Date.now()
+            } else if (Date.now() - stalledSince > STALL_MS) {
+                return failDownload()
             }
 
             if (progress.status === 'completed') {
                 stopPolling()
                 gallery.zip.active = false
+                zipId = undefined
                 window.location.href = api.downloadFileUrl(gallery.token, downloadId)
                 return
             }
-            if (progress.status === 'failed') return failDownload()
+            if (progress.status === 'failed') {
+                zipId = undefined
+                return failDownload()
+            }
         } catch {
-            // A network hiccup is not a failed zip; keep asking.
+            // Network hiccup is not a failed zip; keep asking.
         }
         pollTimer = setTimeout(tick, POLL_MS)
     }
@@ -103,22 +116,18 @@ export async function startDownload(photoIds?: number[]) {
     try {
         const { download_id } = await api.startDownload(gallery.token, photoIds ?? null)
         zipId = download_id
+        // Canceled while the start request was in flight.
+        if (!gallery.zip.active) return abandon()
         poll(download_id)
     } catch {
         failDownload()
     }
 }
 
-export async function cancelDownload() {
+export function cancelDownload() {
     stopPolling()
     gallery.zip.active = false
-    if (!zipId) return
-    try {
-        await api.cancelDownload(gallery.token, zipId)
-    } catch {
-        // Best effort: the user has already moved on.
-    }
-    zipId = undefined
+    abandon()
 }
 
 export function toggleSelectMode() {

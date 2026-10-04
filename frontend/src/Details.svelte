@@ -49,7 +49,9 @@
         if (!photo || !body) return
 
         try {
-            comments.push(await api.addComment(gallery.token, photo.id, body))
+            const comment = await api.addComment(gallery.token, photo.id, body)
+            // The reader may have swiped on while it saved; `comments` is then another photo's.
+            if (gallery.lightboxPhoto?.id === photo.id) comments.push(comment)
             photo.comment_count++
             draft = ''
         } catch {

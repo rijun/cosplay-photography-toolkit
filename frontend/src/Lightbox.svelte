@@ -65,6 +65,8 @@
     })
 
     function onPointerDown(event: PointerEvent) {
+        // The sidebar holds text and buttons; dragging there is never a dismiss.
+        if ((event.target as Element).closest('.sidebar')) return
         pointers.add(event.pointerId)
         // A second finger means a pinch. Abandon any drag already in progress.
         if (pointers.size > 1) return reset()
@@ -130,6 +132,8 @@
     }
 
     function onKeydown(event: KeyboardEvent) {
+        // Arrows move the caret while typing a comment.
+        if (event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLInputElement) return
         if (event.key === 'Escape') gallery.closeLightbox()
         if (event.key === 'ArrowLeft') swiper?.slidePrev()
         if (event.key === 'ArrowRight') swiper?.slideNext()
@@ -159,7 +163,7 @@
         <div class="swiper" bind:this={swiperEl}>
             <div class="swiper-button-prev"></div>
             <div class="swiper-wrapper">
-                {#each gallery.visible as photo (photo.id)}
+                {#each gallery.lightboxPhotos as photo (photo.id)}
                     <div class="swiper-slide">
                         <div class="swiper-zoom-container">
                             <img
