@@ -13,12 +13,12 @@ A self-hosted photo gallery and proofing tool for photographers. Clients receive
 
 ## Stack
 
-| Component | Technology                                 |
-|-----------|--------------------------------------------|
-| Web       | Django 6, Django REST Framework, Alpine.js |
-| CLI       | Click, httpx, boto3                        |
-| Database  | PostgreSQL                                 |
-| Storage   | S3-compatible                              |
+| Component | Technology                                       |
+|-----------|--------------------------------------------------|
+| Web       | Django 6, Django REST Framework, Svelte 5 + Vite |
+| CLI       | Click, httpx, boto3                              |
+| Database  | PostgreSQL                                       |
+| Storage   | S3-compatible                                    |
 
 ## Installation
 
