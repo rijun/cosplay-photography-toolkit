@@ -11,6 +11,8 @@
 
 <div class="photo-grid">
     {#each gallery.visible as photo, i (photo.id)}
+        <!-- Iterate the defs, not photo.flags, so dot order is stable. -->
+        {@const marks = FLAG_DEFS.filter((f) => photo.flags.includes(f.color))}
         <div class="card" class:selected={gallery.isSelected(photo.id)} class:select-mode={gallery.selectMode}>
             <button class="open" onclick={() => (gallery.selectMode ? toggleSelect(photo.id) : gallery.openPhoto(i))}>
                 <img
@@ -19,8 +21,6 @@
                     loading="lazy"
                     onload={(e) => gallery.learnRatio(photo.id, e)}
                 />
-                <!-- Iterate the defs, not photo.flags, so dot order is stable. -->
-                {@const marks = FLAG_DEFS.filter((f) => photo.flags.includes(f.color))}
                 {#if marks.length > 0}
                     <span class="flags">
                         {#each marks as flag (flag.color)}
