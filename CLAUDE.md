@@ -51,12 +51,7 @@ Transform tasks into verifiable goals:
 - "Fix the bug" → "Write a test that reproduces it, then make it pass"
 - "Refactor X" → "Ensure tests pass before and after"
 
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
+For multi-step tasks, name the check that verifies each step.
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
@@ -64,9 +59,11 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 - **Pushing to `main` deploys to production.** Work on `feature/*`; don't push to
   `main` unless asked. See `README.md` and `deploy/systemd/`.
-- **No test suite exists** — `backend/*/tests.py` are empty Django stubs, CI runs only
-  ruff and mypy. Verify with `uv run ruff check`, `uv run mypy`,
-  `uv run python backend/manage.py check`. Section 4 assumes tests: until a runner
+- **No test suite exists** — `backend/*/tests.py` are empty Django stubs. CI runs
+  ruff, mypy, and in `frontend/` prettier, svelte-check/tsc and the Vite build.
+  Verify with `uv run ruff check`, `uv run mypy`,
+  `uv run python backend/manage.py check`, and in `frontend/` `npm run check` and
+  `npm run format:check`. Section 4 assumes tests: until a runner
   exists, propose adding one rather than skipping verification silently.
 - `uv sync` never upgrades — `uv.lock` is the pin. Use
   `uv lock --upgrade-package <name>` to move one dependency.
