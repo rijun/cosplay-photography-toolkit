@@ -19,6 +19,15 @@
                     loading="lazy"
                     onload={(e) => gallery.learnRatio(photo.id, e)}
                 />
+                <!-- Iterate the defs, not photo.flags, so dot order is stable. -->
+                {@const marks = FLAG_DEFS.filter((f) => photo.flags.includes(f.color))}
+                {#if marks.length > 0}
+                    <span class="flags">
+                        {#each marks as flag (flag.color)}
+                            <span class="flag-dot" style="--dot-color: {flag.hex}"></span>
+                        {/each}
+                    </span>
+                {/if}
             </button>
 
             {#if gallery.selectMode}
@@ -28,13 +37,6 @@
                     {/if}
                 </div>
             {/if}
-
-            <div class="flags">
-                <!-- Iterate the defs, not photo.flags, so dot order is stable. -->
-                {#each FLAG_DEFS.filter((f) => photo.flags.includes(f.color)) as flag (flag.color)}
-                    <span class="flag-dot" style="--dot-color: {flag.hex}"></span>
-                {/each}
-            </div>
 
             <div class="actions">
                 <button
@@ -53,14 +55,14 @@
 <style>
     .photo-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.5rem;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.2rem;
     }
 
     /* --- Card --- */
     .card {
         position: relative;
-        padding: 0.3rem 0.3rem 0.2rem;
+        padding: 0.2rem 0.2rem;
         overflow: hidden;
         border-radius: 4px;
         background: var(--cream);
@@ -80,6 +82,7 @@
 
     /* A button so the photo is reachable by keyboard; styled away to nothing. */
     .open {
+        position: relative;
         display: block;
         width: 100%;
         padding: 0;
@@ -100,6 +103,26 @@
 
     .card.selected img {
         opacity: 0.82;
+    }
+
+    /* --- Marks: dots on a dark plate, so they read over any photo --- */
+    .flags {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        z-index: 5;
+        display: flex;
+        gap: 5px;
+        padding: 4px 6px;
+        border-radius: 10px;
+        background: rgba(25, 19, 16, 0.6);
+    }
+
+    .flag-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--dot-color);
     }
 
     /* --- Select mode checkmark --- */
@@ -128,27 +151,6 @@
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
     }
 
-    /* --- Flag dots --- */
-    .flags {
-        position: absolute;
-        top: 0.5rem;
-        left: 0.5rem;
-        z-index: 5;
-        display: flex;
-        gap: 3px;
-    }
-
-    .flag-dot {
-        display: block;
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: var(--dot-color);
-        box-shadow:
-            0 1px 3px rgba(0, 0, 0, 0.15),
-            0 0 0 1.5px rgba(255, 255, 255, 0.6);
-    }
-
     /* --- Flag toggle --- */
     .actions {
         position: absolute;
@@ -159,7 +161,6 @@
         justify-content: flex-end;
         padding: 1.25rem 0.3rem 0.2rem;
         border-radius: 0 0 2px 2px;
-        background: linear-gradient(to top, rgba(var(--cream-rgb), 0.9), transparent);
     }
 
     .heart-btn {

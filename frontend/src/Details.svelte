@@ -112,7 +112,7 @@
         border-bottom: 1px dashed rgba(var(--dust-rgb), 0.18);
         font-size: 0.74rem;
         word-break: break-all;
-        color: rgba(var(--dust-rgb), 0.65);
+        color: var(--text-muted);
     }
 
     /* --- Flags --- */
@@ -130,10 +130,10 @@
         width: 100%;
         min-height: 44px;
         padding: 0.5rem 0.85rem;
-        border: 1.5px solid rgba(var(--dust-rgb), 0.1);
+        border: 1.5px solid rgba(var(--dust-rgb), 0.15);
         border-radius: 10px;
         font-family: inherit;
-        background: rgba(var(--cream-rgb), 0.04);
+        background: rgba(var(--cream-rgb), 0.6);
         cursor: pointer;
         transition: all 0.18s ease;
     }
@@ -144,8 +144,8 @@
 
     .flag-btn.active {
         border-color: var(--flag-color);
-        background: rgba(var(--blush-rgb), 0.08);
-        box-shadow: 0 0 0 1.5px var(--flag-glow);
+        background: rgba(var(--blush-rgb), 0.95);
+        box-shadow: 0 0 0 2px var(--flag-glow);
     }
 
     .flag-btn.final {
@@ -159,7 +159,7 @@
         top: -0.35rem;
         right: 0;
         left: 0;
-        border-top: 1px dashed rgba(var(--dust-rgb), 0.18);
+        border-top: 1px dashed rgba(var(--dust-rgb), 0.3);
     }
 
     .flag-dot {
@@ -184,7 +184,7 @@
         font-weight: 600;
         letter-spacing: 0.1em;
         text-transform: uppercase;
-        color: rgba(var(--dust-rgb), 0.6);
+        color: #a09890;
         transition: color 0.2s;
     }
 
@@ -203,25 +203,25 @@
         font-weight: 700;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: rgba(var(--dust-rgb), 0.55);
+        color: var(--text-secondary);
     }
 
     .comment-loading {
         padding: 0.5rem 0;
         font-size: 0.75rem;
         font-style: italic;
-        color: rgba(var(--dust-rgb), 0.45);
+        color: #b8a8a0;
     }
 
     .comment {
         margin-bottom: 0.4rem;
         padding: 0.65rem 0.85rem;
-        border-left: 2.5px solid rgba(var(--rose-soft-rgb), 0.35);
+        border-left: 2.5px solid #d4b8b0;
         border-radius: 6px;
         font-size: 0.83rem;
         line-height: 1.55;
-        color: rgba(var(--linen-rgb), 0.82);
-        background: rgba(var(--cream-rgb), 0.05);
+        color: var(--text-primary);
+        background: rgba(var(--cream-rgb), 0.8);
     }
 
     .comment-author {
@@ -234,13 +234,13 @@
     .comment-form textarea {
         width: 100%;
         padding: 0.65rem;
-        border: 1.5px solid rgba(var(--dust-rgb), 0.18);
+        border: 1.5px solid rgba(var(--dust-rgb), 0.25);
         border-radius: 8px;
         font-family: inherit;
         font-size: 0.85rem;
         line-height: 1.5;
-        color: var(--text-on-dark);
-        background: rgba(var(--cream-rgb), 0.05);
+        color: var(--text-primary);
+        background: var(--cream);
         resize: vertical;
         transition:
             border-color 0.2s,
@@ -248,7 +248,7 @@
     }
 
     .comment-form textarea::placeholder {
-        color: rgba(var(--dust-rgb), 0.35);
+        color: #b8a8a0;
     }
 
     .comment-form textarea:focus {
@@ -287,38 +287,16 @@
         transform: none;
     }
 
-    /* --- Desktop: light theme --- */
+    /* --- Desktop --- */
     @media (min-width: 768px) {
-        .filename {
-            color: var(--text-muted);
-        }
-
-        .flag-btn {
-            border-color: rgba(var(--dust-rgb), 0.15);
-            background: rgba(var(--cream-rgb), 0.6);
-        }
-
         .flag-btn:hover {
             border-color: var(--flag-color);
             background: rgba(var(--blush-rgb), 0.8);
             transform: none;
         }
 
-        .flag-btn.active {
-            background: rgba(var(--blush-rgb), 0.95);
-            box-shadow: 0 0 0 2px var(--flag-glow);
-        }
-
-        .flag-btn.final::before {
-            border-top-color: rgba(var(--dust-rgb), 0.3);
-        }
-
         .flag-btn:not(.active):hover .flag-dot {
             opacity: 0.7;
-        }
-
-        .flag-label {
-            color: #a09890;
         }
 
         /* Fills the sidebar; the list scrolls so the panel never resizes. */
@@ -333,30 +311,6 @@
             flex: 1;
             min-height: 0;
             overflow-y: auto;
-        }
-
-        .comments-section h3 {
-            color: var(--text-secondary);
-        }
-
-        .comment-loading {
-            color: #b8a8a0;
-        }
-
-        .comment {
-            border-left-color: #d4b8b0;
-            color: var(--text-primary);
-            background: rgba(var(--cream-rgb), 0.8);
-        }
-
-        .comment-form textarea {
-            border-color: rgba(var(--dust-rgb), 0.25);
-            color: var(--text-primary);
-            background: var(--cream);
-        }
-
-        .comment-form textarea::placeholder {
-            color: #b8a8a0;
         }
     }
 </style>

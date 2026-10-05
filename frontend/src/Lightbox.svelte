@@ -301,11 +301,10 @@
         overflow-y: auto;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
-        border-top: 1px solid rgba(var(--dust-rgb), 0.12);
-        border-radius: 16px 16px 0 0;
-        color: var(--text-on-dark);
-        background: linear-gradient(180deg, #242018 0%, #1e1a14 100%);
-        box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.5);
+        border-radius: 22px 22px 0 0;
+        color: var(--text-primary);
+        background: var(--bg-0);
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
         transform: translateY(100%);
         transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
     }
@@ -333,7 +332,7 @@
         height: 4px;
         margin: 0 auto;
         border-radius: 2px;
-        background: rgba(var(--dust-rgb), 0.25);
+        background: rgba(var(--dust-rgb), 0.45);
     }
 
     /* --- Stage: close, arrows and swiper; only .swiper moves on the dismiss drag --- */
